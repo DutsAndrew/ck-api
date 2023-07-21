@@ -9,3 +9,5 @@ from controllers import tasks_controller, teams_controller
 api_blueprint = Blueprint('api', __name__, url_prefix='/api')
 
 api_blueprint.route('/', methods=["GET"])(app_controller.api_welcome_request)
+
+api_blueprint.route('/signup', methods=["POST"])(auth_controller.signup)
