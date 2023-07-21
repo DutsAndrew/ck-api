@@ -1,0 +1,12 @@
+# Python virtual env
+/bin
+/lib
+/lib64
+/include
+pyvenv.cfg
+
+# pycaches
+__pycache__/
+
+# env variables
+.env
