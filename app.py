@@ -1,7 +1,8 @@
 from flask import Flask
 from flask_cors import CORS
 from dotenv import load_dotenv
-import pymongo
+import asyncio
+import motor.motor_asyncio
 import os
 
 # load env variables from .env file
@@ -14,9 +15,9 @@ CORS(app)
 MONGO_URI = os.getenv("MONGO_URI")
 
 # link in to db
-def connect_to_db():
+async def connect_to_db():
     try:
-        client = pymongo.MongoClient(MONGO_URI)
+        client = motor.motor_asyncio.AsyncIOMotorClient(MONGO_URI)
         db = client.get_database()
         return db
     except Exception as e:
@@ -33,7 +34,8 @@ app.register_blueprint(api_blueprint)
 # start server
 if __name__ == "__main__":
     try:
-        db = connect_to_db
+        loop = asyncio.get_event_loop()
+        db = loop.run_until_complete(connect_to_db())
         print("Connected to db successfully")
     except Exception as e:
         print("Error:", e)
