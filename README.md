@@ -1,5 +1,8 @@
 # ClassKeeper
 
+## After MUCH trial and error, FastAPI will be the framework of use so that the API is not i/o bound.
+## currently following this tutorial: https://www.mongodb.com/languages/python/pymongo-tutorial
+
 Users:
 
 * District
