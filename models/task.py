@@ -1,7 +1,4 @@
-from flask import MongoEngine
 from datetime import datetime
-
-db = MongoEngine()
 
 # Tasks should have the following:
 
@@ -12,13 +9,42 @@ db = MongoEngine()
 ## what time it was completed
 ## status of completion
 ## array of sub-tasks if chosen
-## colorscheme set by group
+## color_scheme set by group
 
-class Task(db.Document):
-    assignedTo= db.ListField(db.ReferenceField('User'), required=True)
-    colorScheme = db.StringField(required=False)
-    completeBy = db.DateTimeField(required=True)
-    completedOn = db.DateTimeField(required=False)
-    completed = db.BooleanField(default=False, required=True)
-    createdOn = db.DateTimeField(default=datetime.now, required=True)
-    team = db.ReferenceField('Team', required=True)
+class Task:
+    def __init__(self, db, **kwargs):
+        # Model for Task
+        self.collection = db['tasks']  # Use the 'tasks' collection
+
+        self.assigned_to = kwargs.get("assigned_to", [])
+        self.color_scheme = kwargs.get("color_scheme")
+        self.complete_by = kwargs.get("complete_by")
+        self.completed_on = kwargs.get("completed_on")
+        self.completed = kwargs.get("completed", False)
+        self.created_on = kwargs.get("created_on", datetime.now())
+        self.team = kwargs.get("team")
+
+    def to_dict(self):
+        return {
+            "assigned_to": self.assigned_to,
+            "color_scheme": self.color_scheme,
+            "complete_by": self.complete_by,
+            "completed_on": self.completed_on,
+            "completed": self.completed,
+            "created_on": self.created_on,
+            "team": self.team,
+        }
+
+    # Save the task to the database
+    async def save(self):
+        result = await self.collection.insert_one(self.to_dict())
+        return result.inserted_id
+
+    # Fetch a task by its ObjectID
+    @classmethod
+    async def find_by_id(cls, db, task_id):
+        collection = db['tasks']  # Use the 'tasks' collection
+        task_data = await collection.find_one({"_id": task_id})
+        if task_data:
+            return cls(db, **task_data)
+        return None
