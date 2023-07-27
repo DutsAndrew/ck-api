@@ -8,11 +8,11 @@ from controllers import tasks_controller, teams_controller
 api_router = APIRouter()
 
 # all /api prefixed routes will go here
-@api_router.get('/api/', tags=['api'])
+@api_router.get('/')
 async def get_api():
     return await app_controller.api_welcome_request()
 
 
-@api_router.post('/api/signup', tags=['api'])
+@api_router.post('/signup')
 async def post_signup():
     return await auth_controller.sign_up()

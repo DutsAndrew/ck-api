@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from dotenv import dotenv_values
 from pymongo import MongoClient
+import asyncio
 
 # import routes
 from routes.api_routes import api_router
@@ -22,7 +23,7 @@ def shutdown_db_client():
     app.mongodb_client.close()
 
 app.include_router(app_router)
-app.include_router(api_router)
+app.include_router(api_router, tags=["api"], prefix="/api")
 
 # start sever from CLI with:
 # python -m uvicorn main:app --reload
