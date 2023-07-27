@@ -1,33 +1,22 @@
 from datetime import datetime
+from pydantic import BaseModel, Field
+import uuid
 
-class NoteEdit:
-    def __init__(self, db, **kwargs):
-        # Model for NoteEdit
-        self.collection = db['noteedits']  # Use the 'noteedits' collection
+class NoteEdit(BaseModel):
+    id: str = Field(default_factory=uuid.uuid4, alias="_id")
+    created_on: datetime = Field(default_factory=lambda: datetime.now(), required=True)
+    edited_by: str = Field(required=True)
+    new_entry: str = Field(required=True)
+    old_entry: str = Field(required=True)
 
-        self.edited_by = kwargs.get("edited_by")
-        self.new_entry = kwargs.get("newEntry")
-        self.old_entry = kwargs.get("old_entry")
-        self.created_on = kwargs.get("created_on", datetime.now())
-
-    def to_dict(self):
-        return {
-            "edited_by": self.edited_by,
-            "newEntry": self.newEntry,
-            "old_entry": self.old_entry,
-            "created_on": self.created_on,
+    class Config:
+        allow_population_by_field_name = True
+        schema_extra = {
+            "example": {
+                "_id": "123abcd-b04a-4b30-b46c-32537c7f1f6e",
+                "created_on": "2023-07-27 13:27:25.303335",
+                "edited_by": "123adef-b04a-4b30-b46c-32537c7f1f6e",
+                "new_entry": "<p>This actually happened</p>",
+                "old_entry": "<p>This did not happen</p>",
+            }
         }
-
-    # Save the note edit to the database
-    async def save(self):
-        result = await self.collection.insert_one(self.to_dict())
-        return result.inserted_id
-
-    # Fetch a note edit by its ObjectID
-    @classmethod
-    async def find_by_id(cls, db, note_edit_id):
-        collection = db['noteedits']  # Use the 'noteedits' collection
-        note_edit_data = await collection.find_one({"_id": note_edit_id})
-        if note_edit_data:
-            return cls(db, **note_edit_data)
-        return None

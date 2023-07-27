@@ -1,36 +1,25 @@
-from datetime import datetime
+from datetime import datetime, timedelta
+from pydantic import BaseModel, Field
+import uuid
 
 # Announcements should have the following:
 ## when it was created
 ## what text it needs to send
 ## how long to display for
 
-class Announcement:
-    def __init__(self, db, **kwargs):
-        # Model for Announcement
-        self.collection = db['announcements']  # Use the 'announcements' collection
+class Announcement(BaseModel):
+    id: str = Field(default_factory=uuid.uuid4, alias="_id")
+    announcement: str = Field(required=True)
+    created_on: datetime = Field(default_factory=lambda: datetime.now(), required=True)
+    display_for: timedelta = Field(default_factory=lambda: timedelta(weeks=2), required=True)
 
-        self.announcement = kwargs.get("announcement")
-        self.created_on = kwargs.get("created_on", datetime.now())
-        self.display_for = kwargs.get("display_for")
-
-    def to_dict(self):
-        return {
-            "announcement": self.announcement,
-            "created_on": self.created_on,
-            "display_for": self.display_for,
+    class Config:
+        allow_population_by_field_name = True
+        schema_extra = {
+            "example": {
+                "_id": "066de609-b04a-4b30-b46c-32537c7f1f6e",
+                "announcement": "This is a new feature, enjoy!",
+                "created_on": "2023-07-27 13:27:25.303335",
+                "display_for": "2w",
+            }
         }
-
-    # Save the announcement to the database
-    async def save(self):
-        result = await self.collection.insert_one(self.to_dict())
-        return result.inserted_id
-
-    # Fetch an announcement by its ObjectID
-    @classmethod
-    async def find_by_id(cls, db, announcement_id):
-        collection = db['announcements']  # Use the 'announcements' collection
-        announcement_data = await collection.find_one({"_id": announcement_id})
-        if announcement_data:
-            return cls(db, **announcement_data)
-        return None

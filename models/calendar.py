@@ -1,39 +1,31 @@
+from datetime import datetime
+from typing import Optional, List
+from pydantic import BaseModel, Field
+import uuid
+
 ## Calendars should have the following:
 # what team or user the calendar belongs to
 # what events have been created and added to calendar
 # what year the calendar is for
 # color scheme set by user
 
-class Calendar:
-    def __init__(self, db, **kwargs):
-        # Model for Calendar
-        self.collection = db['calendars']  # Use the 'calendars' collection
+# CALENDARS MUST BE ACCOMPANIED BY A USER OR TEAM _ID BUT NOT BOTH
 
-        self.color_scheme = kwargs.get("color_scheme")
-        self.events = kwargs.get("events", [])
-        self.team = kwargs.get("team")
-        self.user = kwargs.get("user")
-        self.year = kwargs.get("year")
+class Calendar(BaseModel):
+    id: str = Field(default_factory=uuid.uuid4, alias="_id")
+    accompanied_team: str = Field(default_factory=None, required=True)
+    accompanied_user: str = Field(default_factory=None, required=True)
+    events: List[str] = Field(default_factory=list, required=True)
+    year: int = Field(default_factory=lambda: datetime.now().year, required=True)
 
-    def to_dict(self):
-        return {
-            "color_scheme": self.color_scheme,
-            "events": [event.to_dict() for event in self.events],
-            "team": self.team,
-            "user": self.user,
-            "year": self.year,
+    class Config:
+        allow_population_by_field_name = True
+        schema_extra = {
+            "example": {
+                "_id": "066de609-b04a-4b30-b46c-32537c7f1f2z",
+                "accompanied_team": None,
+                "accompanied_user": "066de609-b04a-4b30-b46c-32537c7f1f2z",
+                "events": ["066de609-b04a-4b30-b46c-32537c7f1f2s", "066de609-b04a-4b30-b46c-32537c7f1f2f"],
+                "year": 2023,
+            }
         }
-
-    # Save the calendar to the database
-    async def save(self):
-        result = await self.collection.insert_one(self.to_dict())
-        return result.inserted_id
-
-    # Fetch a calendar by its ObjectID
-    @classmethod
-    async def find_by_id(cls, db, calendar_id):
-        collection = db['calendars']  # Use the 'calendars' collection
-        calendar_data = await collection.find_one({"_id": calendar_id})
-        if calendar_data:
-            return cls(db, **calendar_data)
-        return None

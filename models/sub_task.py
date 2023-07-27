@@ -1,6 +1,7 @@
-import motor.motor_asyncio
-from motor.motor_asyncio import AsyncIOMotorCollection, ListField, DateTimeField, BooleanField, ReferenceField
 from datetime import datetime
+from typing import Optional
+from pydantic import BaseModel, Field
+import uuid
 
 ## Sub tasks should have the following:
 
@@ -10,36 +11,23 @@ from datetime import datetime
 # when subtask was completed
 # users assigned to sub task
 
-class SubTask:
-    def __init__(self, db, **kwargs):
-        # Model for SubTask
-        self.collection = db['subtasks']  # Use the 'subtasks' collection
+class SubTask(BaseModel):
+    id: str = Field(default_factory=uuid.uuid4, alias="_id")
+    assigned_to: str = Field(default_factory=None, required=True)
+    accompanied_task: str = Field(required=True)
+    completed: bool = Field(default_factory=False, required=True)
+    completed_on: Optional[datetime] = Field(default=None)
+    created_on: datetime = Field(default_factory=lambda: datetime.now(), required=True)
 
-        self.assigned_to = kwargs.get("assigned_to", [])
-        self.completed = kwargs.get("completed", False)
-        self.completed_on = kwargs.get("completed_on")
-        self.created_on = kwargs.get("created_on", datetime.now())
-        self.task = kwargs.get("task")
-
-    def to_dict(self):
-        return {
-            "assigned_to": self.assigned_to,
-            "completed": self.completed,
-            "completed_on": self.completed_on,
-            "created_on": self.created_on,
-            "task": self.task,
+    class Config:
+        allow_population_by_field_name = True
+        schema_extra = {
+            "example": {
+                "_id": "066de609-b04a-1a29-c57d-32537c7f1f6e",
+                "assigned_to": "066de123-b04a-1a29-c57d-32537c7f1f6e",
+                "accompanied_task": "066de153-b04a-1a29-c57d-32537c7f1f6e",
+                "completed": False,
+                "completed_on": None,
+                "created_on": "2023-07-27 13:27:25.303335",
+            }
         }
-
-    # Save the subtask to the database
-    async def save(self):
-        result = await self.collection.insert_one(self.to_dict())
-        return result.inserted_id
-
-    # Fetch a subtask by its ObjectID
-    @classmethod
-    async def find_by_id(cls, db, subtask_id):
-        collection = db['subtasks']  # Use the 'subtasks' collection
-        subtask_data = await collection.find_one({"_id": subtask_id})
-        if subtask_data:
-            return cls(db, **subtask_data)
-        return None

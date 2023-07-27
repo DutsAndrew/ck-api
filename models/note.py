@@ -1,5 +1,7 @@
 from datetime import datetime
-
+from typing import List
+from pydantic import BaseModel, Field
+import uuid
 
 ## Notes should have the following:
 
@@ -11,36 +13,27 @@ from datetime import datetime
 # saved notes should be added to team's calendar
 # colorscheme set by group
 
-class Note():
-    def __init__(self, db, **kwargs):
-        # Model for Note
-        self.collection = db['notes']
+# EACH NOTE MUST BE ASSIGNED TO EITHER A TEAM OR USER, BUT NOT BOTH
 
-        self.assigned_team = kwargs.get("assigned_team")
-        self.edits = kwargs.get("edits", [])
-        self.created_on = kwargs.get("created_on", datetime.now())
-        self.note = kwargs.get("note")
-        self.who_created = kwargs.get("who_created")
+class Note(BaseModel):
+    id: str = Field(default_factory=uuid.uuid4, alias="_id")
+    assigned_team: str = Field(default_factory=None)
+    assigned_user: str = Field(default_factory=None)
+    created_on: datetime = Field(default_factory=lambda: datetime.now(), required=True)
+    edits: List[str] = Field(default_factory=list, required=True)
+    note: str = Field(required=True)
+    who_created: str = Field(required=True)
 
-    def to_dict(self):
-        return {
-            "assigned_team": self.assigned_team,
-            "edits": self.edits,
-            "created_on": self.created_on,
-            "note": self.note,
-            "who_created": self.who_created,
+    class Config:
+        allow_population_by_field_name = True
+        schema_extra = {
+            "example": {
+                "_id": "066de609-b04a-4b30-b46c-32537c7c2c5n",
+                "assigned_team": "066de609-b04a-4b30-b46c-32537c7c2c5o",
+                "assigned_user": None,
+                "created_on": "2023-07-27 13:27:25.303335",
+                "edits": ["066de609-b04a-4b30-b46c-32537c7c2c5p", "066de609-b04a-4b30-b46c-32537c7c2c5q"],
+                "note": "<h1>6th Team Meeting</h1><br><p>We talked about nothing</p>",
+                "who_created": "066de609-b04a-4b30-b46c-32537c7c2c5r",
+            }
         }
-    
-    async def save(self):
-        result = await self.collection.insert_one(self.to_dict())
-        return result.inserted_id
-    
-    @classmethod
-    async def find_by_id(cls, db, note_id):
-        collection = db['notes'] # use the notes collection
-        note_data = await collection.find_one({"_id": note_id})
-        if note_data:
-            return cls(db, **note_data)
-        else:
-            return None
-    

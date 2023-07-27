@@ -1,4 +1,7 @@
 from datetime import datetime
+from typing import List
+from pydantic import BaseModel, Field
+import uuid
 
 ## Messages should have the following:
 
@@ -7,34 +10,21 @@ from datetime import datetime
 # whether team members have read it or not
 # which chat_id it belongs to
 
-class Message:
-    def __init__(self, db, **kwargs):
-        # Model for Message
-        self.collection = db['messages']  # Use the 'messages' collection
+class Message(BaseModel):
+    id: str = Field(default_factory=uuid.uuid4, alias="_id")
+    accompanied_chat: str = Field(required=True)
+    created_by: str = Field(required=True)
+    created_on: datetime = Field(default_factory=lambda: datetime.now(), required=True)
+    who_has_read: List[str] = Field(default_factory=list, required=True)
 
-        self.created_by = kwargs.get("created_by")
-        self.created_on = kwargs.get("created_on", datetime.now())
-        self.which_chat = kwargs.get("which_chat")
-        self.who_has_read = kwargs.get("who_has_read", [])
-
-    def to_dict(self):
-        return {
-            "created_by": self.created_by,
-            "created_on": self.created_on,
-            "which_chat": self.which_chat,
-            "who_has_read": self.who_has_read,
+    class Config:
+        allow_population_by_field_name = True
+        schema_extra = {
+            "example": {
+                "_id": "066de609-b04a-4b30-b46c-99004c7f1f6e",
+                "accompanied_chat": "066de609-a15b-4b30-b46c-99004c7f1f6e",
+                "created_by": "126de609-a15b-4b30-b46c-99004c7f1f6e",
+                "created_on": "2023-07-27 13:27:25.303335",
+                "who_has_read": ["136de609-a15b-4b30-b46c-99004c7f1f6e", "156de609-a15b-4b30-b46c-99004c7f1f6e"],
+            }
         }
-
-    # Save the message to the database
-    async def save(self):
-        result = await self.collection.insert_one(self.to_dict())
-        return result.inserted_id
-
-    # Fetch a message by its ObjectID
-    @classmethod
-    async def find_by_id(cls, db, message_id):
-        collection = db['messages']  # Use the 'messages' collection
-        message_data = await collection.find_one({"_id": message_id})
-        if message_data:
-            return cls(db, **message_data)
-        return None
