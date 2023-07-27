@@ -1,9 +1,14 @@
-import motor.motor_asyncio
-from motor.motor_asyncio import AsyncIOMotorCollection, StringField, ListField, ReferenceField
 from datetime import datetime
+from typing import List, Optional
+from pydantic import BaseModel, Field
+import uuid
+
+# Other models needed to create this one
 from note import Note
 from task import Task
 from user import User
+from calendar import Calendar
+from color_scheme import ColorScheme
 
 # To keep data clean, teams need to hold the majority of the data to keep user data low
 ## Teams should have the following:
@@ -15,38 +20,28 @@ from user import User
 ### team lead assigned to manage team
 ### color scheme set by group
 
-class Team:
-    def __init__(self, db, **kwargs):
-        # Model for Team
-        self.collection = db['teams']  # Use the 'teams' collection
+class Team(BaseModel):
+    id: str = Field(default_factory=uuid.uuid4, alias="_id")
+    calendar: Calendar = Field(required=True)
+    color_scheme: Optional[ColorScheme]
+    notes: List[Note] = Field(default_factory=list, required=True)
+    tasks: List[Task] = Field(default_factory=list, required=True)
+    team_lead: str
+    users: List[str] = Field(default_factory=list, required=True)
 
-        self.calendar = kwargs.get("calendar")
-        self.color_scheme = kwargs.get("color_scheme")
-        self.notes = kwargs.get("notes", [])
-        self.tasks = kwargs.get("tasks", [])
-        self.team_lead = kwargs.get("team_lead")
-        self.users = kwargs.get("users", [])
-
-    def to_dict(self):
-        return {
-            "calendar": self.calendar,
-            "color_scheme": self.color_scheme,
-            "notes": [note.to_dict() for note in self.notes],
-            "tasks": [task.to_dict() for task in self.tasks],
-            "team_lead": self.team_lead,
-            "users": self.users,
+    class Config:
+        allow_population_by_field_name = True
+        schema_extra = {
+            "example": {
+                "_id": "066de500-a02a-4b30-b46c-32537c7f1f6e",
+                "calendar": "066de501-a02a-4b30-b46c-32537c7f1f6e",
+                "color_scheme": {
+                    "font_color": "#37D9C8",
+                    "background_color": "rgb(55, 217, 200)"
+                },
+                "notes": ["066de500-a02a-4b30-b46c-32537c7f1f7d", "066de500-a02a-4b30-b46c-32537c7f1f7y"],
+                "tasks": ["066de500-a02a-4b30-b46c-12337c7f1f6e", "066de500-a02a-4b30-b46c-98737c7f1f6e"],
+                "team_lead": "066de500-a02a-4b30-b46c-32537c6d1f6e",
+                "users": ["011de500-a02a-4b30-b46c-32537c7f1f6e", "066de500-a02a-5c30-b46c-32537c7f1f6e"]
+            }
         }
-
-    # Save the team to the database
-    async def save(self):
-        result = await self.collection.insert_one(self.to_dict())
-        return result.inserted_id
-
-    # Fetch a team by team_lead
-    @classmethod
-    async def find_by_team_lead(cls, db, team_lead):
-        collection = db['teams']  # Use the 'teams' collection
-        team_data = await collection.find_one({"team_lead": team_lead})
-        if team_data:
-            return cls(db, **team_data)
-        return None
