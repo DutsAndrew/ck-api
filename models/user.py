@@ -9,20 +9,20 @@ from color_scheme import UserColorPreferences
 
 class User(BaseModel):
     id: str = Field(default_factory=uuid.uuid4, alias="_id")
-    account_type: str = Field(default='basic', required=True)
+    account_type: str = Field(default_factory='basic')
     email: EmailStr = Field(required=True)
-    calendars: List[str] = Field(default_factory=list, required=True)
-    chats: List[str] = Field(default_factory=list, required=True)
-    company: Optional[str] = Field(default=None)
+    calendars: List[str] = Field(default_factory=list)
+    chats: List[str] = Field(default_factory=list)
+    company: Optional[str] = Field(default_factory=None)
     first_name: str = Field(required=True)
-    joined: datetime = Field(default_factory=lambda: datetime.now(), required=True)
+    joined: datetime = Field(default_factory=lambda: datetime.now())
     job_title: Optional[str] = Field(default=None)
     last_name: str = Field(required=True)
-    last_online: datetime = Field(default_factory=lambda: datetime.now(), required=True)
-    notes: List[str] = Field(default_factory=list, required=True)
-    password_hashed: str = Field(required=True)
-    tasks: List[str] = Field(default_factory=list, required=True)
-    teams: List[str] = Field(default_factory=list, required=True)
+    last_online: datetime = Field(default_factory=lambda: datetime.now())
+    notes: List[str] = Field(default_factory=list)
+    password_hashed: str
+    tasks: List[str] = Field(default_factory=list)
+    teams: List[str] = Field(default_factory=list)
     user_color_preferences: UserColorPreferences
 
     class Config:
