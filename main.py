@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from dotenv import dotenv_values
-from pymongo import MongoClient
+from motor.motor_asyncio import AsyncIOMotorClient
 import asyncio
 
 # import routes
@@ -13,13 +13,13 @@ config = dotenv_values(".env")
 app = FastAPI()
 
 @app.on_event("startup")
-def startup_db_client():
-    app.mongodb_client = MongoClient(config["MONGO_URI"])
+async def startup_db_client():
+    app.mongodb_client = AsyncIOMotorClient(config["MONGO_URI"])
     app.database = app.mongodb_client[config["DB_NAME"]]
     print("Connected to MongoDB!")
 
 @app.on_event("shutdown")
-def shutdown_db_client():
+async def shutdown_db_client():
     app.mongodb_client.close()
 
 app.include_router(app_router)
