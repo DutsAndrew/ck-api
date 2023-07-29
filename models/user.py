@@ -20,10 +20,10 @@ class User(BaseModel):
     last_name: str = Field(required=True)
     last_online: datetime = Field(default_factory=lambda: datetime.now())
     notes: List[str] = Field(default_factory=list)
-    password: str
+    password: str = Field(required=True)
     tasks: List[str] = Field(default_factory=list)
     teams: List[str] = Field(default_factory=list)
-    user_color_preferences: UserColorPreferences
+    user_color_preferences: Optional[UserColorPreferences] = Field(default=None)
 
     class Config:
         populate_by_name = True
@@ -124,7 +124,7 @@ class User(BaseModel):
         if len(v) > 1000:
             raise ValidationError("first name must be no more than 1000 characters")
         
-        if not v.isAlpha():
+        if not re.match(r'^[A-Za-z \-\'\.]+$', v):
             raise ValidationError(" first name has too many non-alpha characters")
             
         return v
@@ -143,12 +143,12 @@ class User(BaseModel):
         if len(v) > 1000:
             raise ValidationError("Your last name must be no more than 1000 characters")
         
-        if not v.isAlpha():
+        if not re.match(r'^[A-Za-z \-\'\.]+$', v):
             raise ValidationError("Your last name has too many non-alpha characters")
             
         return v
     
-    @validator('password')
+    @validator('password', pre=True)
     def validate_password(cls, v):
         # no password
         if not v:
@@ -163,8 +163,7 @@ class User(BaseModel):
             raise ValidationError("your password cannot be more than 100 characters")
 
         # Match at least 2 numbers and 1 symbol
-        pattern = r'^(?=(.*\d){2})(?=.*[!@#$%^&*()_+={}[\]:;<>,.?~])'
-        if not re.match(pattern, v):
+        if not re.match(r'^(?=(.*\d.*){2})(?=.*[!@#$%^&*()_+={}[\]:;<>,.?~])', v):
             raise ValidationError("Your password must have at least 2 numbers and 1 symbol")
         
         return v
@@ -174,16 +173,17 @@ class User(BaseModel):
     def validate_job_title(cls, v):
         if v is not None:
             # job title was added validate it
+            print("validating job title", v)
             if len(v) < 2:
                 raise ValidationError("Your job title entry must be at least 2 characters, FYI this field is not required and can be left blank")
 
             if len(v) > 50:
                 raise ValidationError("Your job title must be no more than 50 characters, FYI this field is not required and can be left blank")
 
-            if not v.isAlpha():
+            if not re.match(r'^[A-Za-z \-\'\.]+$', v):
                 raise ValidationError("Your job title must be in alpha characters, FYI this field is not required and can be left blank")
 
-            return v
+        return v
         
     @validator('company', pre=True)
     def validate_company(cls, v):
@@ -195,5 +195,18 @@ class User(BaseModel):
             if len(v) > 50:
                 raise ValidationError("Your company name must be no more than 50 characters, FYI this field is not required and can be left blank")
             
-            if not v.isAlpha():
+            if not re.match(r'^[A-Za-z \-\'\.]+$', v):
                 raise ValidationError("Your company name must be in alpha characters, FYI this field is not required and can be left blank")
+
+        return v
+    
+# Example JSON Data that passes Validation:
+# {
+#   "email": "email@gmail.com",
+#   "company": "amazon",
+#   "first_name": "John",
+#   "last_name": "Krawzinski",
+#   "job_title": "Web Developer",
+#   "password": "squares101$",
+#   "confirm_password": "squares101$"
+# }

@@ -1,8 +1,9 @@
 from datetime import datetime
 from models.user import User
+from fastapi import Request
 import bcrypt
 
-async def sign_up(request, user):
+async def sign_up(request: Request, user: User):
     # form has been validated with the User model, each user object passed in should have the following:
     # email, first_name, last_name, request.body.get('password'), and 2 optional fields: job_title and company
 

@@ -1,9 +1,11 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Request, Body
 from controllers import account_controller, announcements_controller
 from controllers import app_controller, auth_controller
 from controllers import calendar_controller, jenkins_ai_controller
 from controllers import messaging_controller, notes_controller, pages_controller
 from controllers import tasks_controller, teams_controller
+
+from models.user import User
 
 api_router = APIRouter()
 
@@ -14,5 +16,5 @@ async def get_api():
 
 
 @api_router.post('/signup')
-async def post_signup():
-    return await auth_controller.sign_up()
+async def post_signup(request: Request, user: User):
+    return await auth_controller.sign_up(request, user)
