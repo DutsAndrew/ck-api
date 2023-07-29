@@ -1,4 +1,3 @@
-from datetime import datetime
 from models.user import User
 from fastapi import Request
 from fastapi.encoders import jsonable_encoder
