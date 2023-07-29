@@ -10,3 +10,6 @@ __pycache__/
 
 # env variables
 .env
+
+# build progress for dev
+build-progress.md

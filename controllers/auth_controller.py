@@ -1,6 +1,5 @@
 from datetime import datetime
 from models.user import User
-from models.color_scheme import UserColorPreferences
 from fastapi import Request
 from fastapi.encoders import jsonable_encoder
 import bcrypt
@@ -42,7 +41,6 @@ async def sign_up(request: Request, user: User):
             # begin uploading user to db
             try: 
                 upload_user = await request.app.database["users"].insert_one(user_data)
-                
                 if upload_user:
                     return {
                         "message": "Success, we created your account",
@@ -71,7 +69,7 @@ async def sign_up(request: Request, user: User):
                         "password": request.body.get('password'),
                         "confirm_password": request.body.get('confirm_password'),
                 }
-    
+            
     except Exception as e:
         return {
             "message": f"We could not confirm that email address and had to abort, the error was: {e}"
