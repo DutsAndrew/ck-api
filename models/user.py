@@ -23,7 +23,8 @@ class User(BaseModel):
     password: str = Field(required=True)
     tasks: List[str] = Field(default_factory=list)
     teams: List[str] = Field(default_factory=list)
-    user_color_preferences: Optional[UserColorPreferences] = Field(default=None)
+    user_color_preferences: UserColorPreferences = Field(default_factory=lambda: UserColorPreferences())
+    verified_email: str = Field(default=False)
 
     class Config:
         populate_by_name = True

@@ -7,9 +7,7 @@ from typing import Optional, List
 ## chats can be set be the user to a preferred scheme
 ## events can have their own colors set, it will change for all that share the same name
 
-
-class ColorScheme(BaseModel):
-    apply_to_which_object_id: Optional[str]
+class UserColorScheme(BaseModel):
     font_color: Optional[str]
     background_color: Optional[str]
 
@@ -22,12 +20,31 @@ class ColorScheme(BaseModel):
             }
         }
 
+
+class ColorScheme(BaseModel):
+    apply_to_which_object_id: Optional[str]
+    font_color: Optional[str]
+    background_color: Optional[str]
+
+    class Config:
+        populate_by_name = True
+        json_schema_extra = {
+            "example": {
+                "apply_to_which_object_id": "123",
+                "font_color": "#37D9C8",
+                "background_color": "rgb(55, 217, 200)"
+            }
+        }
+
 class UserColorPreferences(BaseModel):
-    calendars: List[ColorScheme] = Field(default_factory=list, required=True)
-    chats: List[ColorScheme] = Field(default_factory=list, required=True)
-    events: List[ColorScheme] = Field(default_factory=list, required=True)
-    teams: List[ColorScheme] = Field(default_factory=list, required=True)
-    user: ColorScheme
+    calendars: List[ColorScheme] = Field(default_factory=list)
+    chats: List[ColorScheme] = Field(default_factory=list)
+    events: List[ColorScheme] = Field(default_factory=list)
+    teams: List[ColorScheme] = Field(default_factory=list)
+    user: UserColorScheme = Field(default_factory=lambda: UserColorScheme(
+        font_color=None,
+        background_color=None,
+    ))
 
     class Config:
         populate_by_name = True
