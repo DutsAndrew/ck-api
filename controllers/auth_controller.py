@@ -28,7 +28,7 @@ async def sign_up(request, user):
             hashed_password = bcrypt.hashpw(request.body.get('password').encode("utf-8"), bcrypt.gensalt())
 
             # create an instance of user model
-            user = User(**user.dict(), password_hashed=hashed_password)
+            user = User(**user.dict(), password=hashed_password)
 
             # begin uploading user to db
             try: 

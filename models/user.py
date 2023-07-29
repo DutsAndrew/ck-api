@@ -5,11 +5,11 @@ import uuid
 import re
 
 # other models needed to create this one
-from color_scheme import UserColorPreferences
+from models.color_scheme import UserColorPreferences
 
 class User(BaseModel):
     id: str = Field(default_factory=uuid.uuid4, alias="_id")
-    account_type: str = Field(default_factory='basic')
+    account_type: str = Field(default='basic')
     email: EmailStr = Field(required=True)
     calendars: List[str] = Field(default_factory=list)
     chats: List[str] = Field(default_factory=list)
@@ -20,14 +20,14 @@ class User(BaseModel):
     last_name: str = Field(required=True)
     last_online: datetime = Field(default_factory=lambda: datetime.now())
     notes: List[str] = Field(default_factory=list)
-    password_hashed: str
+    password: str
     tasks: List[str] = Field(default_factory=list)
     teams: List[str] = Field(default_factory=list)
     user_color_preferences: UserColorPreferences
 
     class Config:
-        allow_population_by_field_name = True
-        schema_extra = {
+        populate_by_name = True
+        json_schema_extra = {
             "example": {
                 "_id": "066de609-b04a-4b30-b46c-32537c7f1f6e",
                 "account_type": 'basic',

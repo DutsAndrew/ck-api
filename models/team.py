@@ -21,8 +21,8 @@ class Team(BaseModel):
     users: List[str] = Field(default_factory=list, required=True)
 
     class Config:
-        allow_population_by_field_name = True
-        schema_extra = {
+        populate_by_name = True
+        json_schema_extra = {
             "example": {
                 "_id": "066de500-a02a-4b30-b46c-32537c7f1f6e",
                 "calendar": "066de501-a02a-4b30-b46c-32537c7f1f6e",

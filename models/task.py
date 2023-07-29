@@ -22,8 +22,8 @@ class Task(BaseModel):
   team: Optional[str] = Field(default_factory=None)
 
   class Config:
-    allow_population_by_field_name = True
-    schema_extra = {
+    populate_by_name = True
+    json_schema_extra = {
         "example": {
           "_id": "066de609-b04a-0j85-b46c-32537c7f1f6e",
           "assigned_to": "166de609-b04a-0j85-b46c-32537c7f1f6e",

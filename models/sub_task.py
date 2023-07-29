@@ -20,8 +20,8 @@ class SubTask(BaseModel):
     created_on: datetime = Field(default_factory=lambda: datetime.now(), required=True)
 
     class Config:
-        allow_population_by_field_name = True
-        schema_extra = {
+        populate_by_name = True
+        json_schema_extra = {
             "example": {
                 "_id": "066de609-b04a-1a29-c57d-32537c7f1f6e",
                 "assigned_to": "066de123-b04a-1a29-c57d-32537c7f1f6e",

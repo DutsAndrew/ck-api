@@ -9,13 +9,13 @@ from typing import Optional, List
 
 
 class ColorScheme(BaseModel):
-    apply_to_which_object_ids: Optional[str]
+    apply_to_which_object_id: Optional[str]
     font_color: Optional[str]
     background_color: Optional[str]
 
     class Config:
-        allow_population_by_field_name = True
-        schema_extra = {
+        populate_by_name = True
+        json_schema_extra = {
             "example": {
                 "font_color": "#37D9C8",
                 "background_color": "rgb(55, 217, 200)"
@@ -28,3 +28,62 @@ class UserColorPreferences(BaseModel):
     events: List[ColorScheme] = Field(default_factory=list, required=True)
     teams: List[ColorScheme] = Field(default_factory=list, required=True)
     user: ColorScheme
+
+    class Config:
+        populate_by_name = True
+        json_schema_extra = {
+            "example": {
+                "calendars": [
+                    {
+                        "apply_to_which_object_id": "calendar_id_1",
+                        "font_color": "#FF0000",
+                        "background_color": "rgb(255, 0, 0)"
+                    },
+                    {
+                        "apply_to_which_object_id": "calendar_id_2",
+                        "font_color": "#0000FF",
+                        "background_color": "rgb(0, 0, 255)"
+                    }
+                ],
+                "chats": [
+                    {
+                        "apply_to_which_object_id": "chat_id_1",
+                        "font_color": "#00FF00",
+                        "background_color": "rgb(0, 255, 0)"
+                    },
+                    {
+                        "apply_to_which_object_id": "chat_id_2",
+                        "font_color": "#00FF00",
+                        "background_color": "rgb(0, 255, 0)"
+                    }
+                ],
+                "events": [
+                    {
+                        "apply_to_which_object_id": "event_id_1",
+                        "font_color": "#FFFF00",
+                        "background_color": "rgb(255, 255, 0)"
+                    },
+                    {
+                        "apply_to_which_object_id": "event_id_2",
+                        "font_color": "#FFFF00",
+                        "background_color": "rgb(255, 255, 0)"
+                    }
+                ],
+                "teams": [
+                    {
+                        "apply_to_which_object_id": "team_id_1",
+                        "font_color": "#FF00FF",
+                        "background_color": "rgb(255, 0, 255)"
+                    },
+                    {
+                        "apply_to_which_object_id": "team_id_2",
+                        "font_color": "#FF00FF",
+                        "background_color": "rgb(255, 0, 255)"
+                    }
+                ],
+                "user": {
+                    "font_color": "#000000",
+                    "background_color": "#FFFFFF"
+                },
+            }
+        }
