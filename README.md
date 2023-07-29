@@ -3,6 +3,9 @@
 CK-API is a backend built with Python, FastAPI, MongoDB, and motor to make a fast, scalable, and non-io blocking API that can handle many requests at one time.
 This API is paired with the CK-Client you can view more of that project [here](https://github.com/DutsAndrew/ck-client). CK is a employee organization tool that helps users stay organized by keeping the many apps that we all use day-to-day in one interface.
 
+If you would like to contribute, talk about pricing, or participating in the BETA please reach out to: dutsandrew@gmail.com
+CK is open source to keep things transparent for users and to allow the community around the application to grow.
+
 ## Task List
 
 ### App Setup
