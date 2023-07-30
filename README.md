@@ -14,6 +14,7 @@ CK is open source to keep things transparent for users and to allow the communit
 - [X] Setup FastAPI Framework for fast building and performance
 - [X] Organize App into MVC architecture with Models, Views, Controllers, and Models all siloed into their own modules
 - [X] Keep virtualenv dependencies stored in requirements.txt and in the local files
+- [X] Setup Fly.io deployment for production use
 
 ### Data Modeling
 - [X] Silo models in "Models" folder and use them in controllers as needed to validate and maintain data according to schemas

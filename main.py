@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 from dotenv import dotenv_values
 from motor.motor_asyncio import AsyncIOMotorClient
-import asyncio
 
 # import routes
 from routes.api_routes import api_router
