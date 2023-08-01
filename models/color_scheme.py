@@ -11,14 +11,16 @@ class UserColorScheme(BaseModel):
     font_color: Optional[str]
     background_color: Optional[str]
 
-    class Config:
-        populate_by_name = True
-        json_schema_extra = {
+    model_config = {
+        "populate_by_name": True,
+        "arbitrary_types_allowed": True,
+        "json_schema_extra": {
             "example": {
                 "font_color": "#37D9C8",
                 "background_color": "rgb(55, 217, 200)"
             }
         }
+    }
 
 
 class ColorScheme(BaseModel):
@@ -26,15 +28,17 @@ class ColorScheme(BaseModel):
     font_color: Optional[str]
     background_color: Optional[str]
 
-    class Config:
-        populate_by_name = True
-        json_schema_extra = {
+    model_config = {
+        "populate_by_name": True,
+        "arbitrary_types_allowed": True,
+        "json_schema_extra": {
             "example": {
                 "apply_to_which_object_id": "123",
                 "font_color": "#37D9C8",
                 "background_color": "rgb(55, 217, 200)"
             }
         }
+    }
 
 class UserColorPreferences(BaseModel):
     calendars: List[ColorScheme] = Field(default_factory=list)
@@ -46,9 +50,10 @@ class UserColorPreferences(BaseModel):
         background_color=None,
     ))
 
-    class Config:
-        populate_by_name = True
-        json_schema_extra = {
+    model_config = {
+        "populate_by_name": True,
+        "arbitrary_types_allowed": True,
+        "json_schema_extra": {
             "example": {
                 "calendars": [
                     {
@@ -104,3 +109,4 @@ class UserColorPreferences(BaseModel):
                 },
             }
         }
+    }

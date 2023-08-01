@@ -1,7 +1,8 @@
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel, Field
-import uuid
+from models.bson_object_id import PyObjectId
+from bson import ObjectId
 
 ## Messages should have the following:
 
@@ -11,20 +12,22 @@ import uuid
 # which chat_id it belongs to
 
 class Message(BaseModel):
-    id: str = Field(default_factory=uuid.uuid4, alias="_id")
-    accompanied_chat: str = Field(required=True)
-    created_by: str = Field(required=True)
-    created_on: datetime = Field(default_factory=lambda: datetime.now(), required=True)
-    who_has_read: List[str] = Field(default_factory=list, required=True)
+    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    accompanied_chat: PyObjectId = Field(None)
+    created_by: PyObjectId = Field(None)
+    created_on: datetime = Field(default_factory=lambda: datetime.now, required=True)
+    who_has_read: Optional[List[PyObjectId]] = Field(default_factory=list, required=True)
 
-    class Config:
-        populate_by_name = True
-        json_schema_extra = {
+    model_config = {
+        "populate_by_name": True,
+        "arbitrary_types_allowed": True,
+        "json_encoders": {ObjectId: str},
+        "json_schema_extra": {
             "example": {
-                "_id": "066de609-b04a-4b30-b46c-99004c7f1f6e",
-                "accompanied_chat": "066de609-a15b-4b30-b46c-99004c7f1f6e",
-                "created_by": "126de609-a15b-4b30-b46c-99004c7f1f6e",
+                "accompanied_chat": str(ObjectId()),
+                "created_by": str(ObjectId()),
                 "created_on": "2023-07-27 13:27:25.303335",
-                "who_has_read": ["136de609-a15b-4b30-b46c-99004c7f1f6e", "156de609-a15b-4b30-b46c-99004c7f1f6e"],
+                "who_has_read": [str(ObjectId()), str(ObjectId())],
             }
         }
+    }

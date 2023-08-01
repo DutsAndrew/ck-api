@@ -1,7 +1,8 @@
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel, Field
-import uuid
+from models.bson_object_id import PyObjectId
+from bson import ObjectId
 
 ## Chats should have the following:
 
@@ -11,18 +12,22 @@ import uuid
 # color_scheme set by group
 
 class Chat(BaseModel):
-    id: str = Field(default_factory=uuid.uuid4, alias="_id")
-    last_message: datetime = Field(default_factory=lambda: datetime.now(), required=True)
-    messages: List[str] = Field(default_factory=list, required=True)
-    users: List[str] = Field(default_factory=list, required=True)
+    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    last_message: Optional[datetime] = Field(default_factory=lambda: datetime.now)
+    messages: Optional[List[PyObjectId]] = Field(default_factory=list)
+    users: Optional[List[PyObjectId]] = Field(default_factory=list)
+    pending_users: Optional[List[PyObjectId]] = Field(None)
 
-    class Config:
-        populate_by_name = True
-        json_schema_extra = {
+    mode_config = {
+        "populate_by_name": True,
+        "arbitrary_types_allowed": True,
+        "json_encoders": {ObjectId: str}, # Map ObjectId to the str encoder func
+        "json_schema_extra": {
             "example": {
-                "_id": "055de609-b04a-4b30-b46c-32537c7f1f6e",
-                "messages": ["055de609-a14a-4b30-b46c-32537c7f1f6e"],
+                "messages": [str(ObjectId())],
                 "last_message": "2023-07-27 13:27:25.303335",
-                "users": ["066de609-b04a-4b30-b46c-32537c7f1f6d", "066de609-b04a-4b30-b46c-32537c7f1f6z", "066de609-b04a-4b30-b46c-32537c7f1f6e"],
+                "users": [str(ObjectId()), str(ObjectId()), str(ObjectId())],
+                "pending_users": [str(ObjectId())],
             }
         }
+    }

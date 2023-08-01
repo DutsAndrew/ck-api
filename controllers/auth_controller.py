@@ -41,10 +41,22 @@ async def sign_up(request: Request, user: User):
             try: 
                 upload_user = await request.app.database["users"].insert_one(user_data)
                 if upload_user:
-                    return {
-                        "message": "Success, we created your account",
-                        "success": True,
-                    }
+                    find_user = await request.app.database["users"].find_one({"_id": user.id})
+                    if find_user is not None:
+                        strip_sensitive_user_data = {
+                            "email": find_user.email,
+                            "first_name": find_user.first_name,
+                            "last_name": find_user.last_name,
+                        }
+                        return {
+                            "message": "Success, we created your account",
+                            "success": True,
+                            "user": strip_sensitive_user_data,
+                        }
+                    else:
+                        return {
+                            "message": "There was an issue creating your account, please try again later"
+                        }
                 else:
                     return {
                         "message": "Failed to save user",

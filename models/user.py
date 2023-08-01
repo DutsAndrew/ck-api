@@ -1,14 +1,14 @@
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel, Field, EmailStr, validator, ValidationError
-import uuid
+from pydantic import BaseModel, Field, EmailStr, field_validator, ValidationError
+from models.color_scheme import UserColorPreferences
+from models.bson_object_id import PyObjectId
+from bson import ObjectId
 import re
 
-# other models needed to create this one
-from models.color_scheme import UserColorPreferences
 
 class User(BaseModel):
-    id: str = Field(default_factory=uuid.uuid4, alias="_id")
+    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     account_type: str = Field(default='basic')
     email: EmailStr = Field(required=True)
     calendars: List[str] = Field(default_factory=list)
@@ -21,16 +21,124 @@ class User(BaseModel):
     last_online: datetime = Field(default_factory=lambda: datetime.now())
     notes: List[str] = Field(default_factory=list)
     password: str = Field(required=True)
+    pending_chats: Optional[List[PyObjectId]] = Field(default_factory=list)
+    pending_tasks: Optional[List[PyObjectId]] = Field(default_factory=list)
+    pending_teams: Optional[List[PyObjectId]] = Field(default_factory=list)
     tasks: List[str] = Field(default_factory=list)
     teams: List[str] = Field(default_factory=list)
     user_color_preferences: UserColorPreferences = Field(default_factory=lambda: UserColorPreferences())
-    verified_email: str = Field(default=False)
+    verified_email: bool = Field(default=False)
 
-    class Config:
-        populate_by_name = True
-        json_schema_extra = {
+    @field_validator('email')
+    @classmethod
+    def validate_email(cls, v):
+        # if no email provided return
+        if not v:
+            raise ValidationError("You cannot create an account without an email address")
+        return v
+    
+        # all other email validation can be done through Pydantic's EmailStr type
+
+    @field_validator('first_name')
+    @classmethod
+    def validate_first_name(cls, v):
+        # if no first name
+        if not v:
+            raise ValidationError("We cannot create your account without a first name entry")
+    
+        # if first name is too short
+        if len(v) < 1:
+            raise ValidationError("Your first name must be at least 1 character")
+        
+        # if first name is too long
+        if len(v) > 1000:
+            raise ValidationError("first name must be no more than 1000 characters")
+        
+        if not re.match(r'^[A-Za-z \-\'\.]+$', v):
+            raise ValidationError(" first name has too many non-alpha characters")
+            
+        return v
+    
+    @field_validator('last_name')
+    @classmethod
+    def validate_last_name(cls, v):
+        # if no last name
+        if not v:
+            raise ValidationError("We cannot create your account without a last name entry")
+    
+        # if last name is too short
+        if len(v) < 1:
+            raise ValidationError("Your last name must be at least 1 character")
+        
+        # if first name is too long
+        if len(v) > 1000:
+            raise ValidationError("Your last name must be no more than 1000 characters")
+        
+        if not re.match(r'^[A-Za-z \-\'\.]+$', v):
+            raise ValidationError("Your last name has too many non-alpha characters")
+            
+        return v
+    
+    @field_validator('password', mode='after')
+    @classmethod
+    def validate_password(cls, v):
+        # no password
+        if not v:
+            raise ValidationError("You cannot create an account without adding a password")
+
+        # password is too short
+        if len(v) < 5:
+            raise ValidationError("Your password must be more than 5 characters")
+
+        # password is too long
+        if len(v) > 100:
+            raise ValidationError("your password cannot be more than 100 characters")
+
+        # Match at least 2 numbers and 1 symbol
+        if not re.match(r'^(?=(.*\d.*){2})(?=.*[!@#$%^&*()_+={}[\]:;<>,.?~])', v):
+           raise ValidationError("Your password must have at least 2 numbers and 1 symbol")
+        
+        return v
+    
+    # mode='before' runs the validator before value is set on model
+    @field_validator('job_title', mode='after')
+    @classmethod
+    def validate_job_title(cls, v):
+        if v is not None:
+            # job title was added validate it
+            if len(v) < 2:
+                raise ValidationError("Your job title entry must be at least 2 characters, FYI this field is not required and can be left blank")
+
+            if len(v) > 50:
+                raise ValidationError("Your job title must be no more than 50 characters, FYI this field is not required and can be left blank")
+
+            if not re.match(r'^[A-Za-z \-\'\.]+$', v):
+                raise ValidationError("Your job title must be in alpha characters, FYI this field is not required and can be left blank")
+
+        return v
+        
+    @field_validator('company', mode='after')
+    @classmethod
+    def validate_company(cls, v):
+        if v is not None:
+            # company added
+            if len(v) < 2:
+                raise ValidationError("Your company name entry must be at least 2 characters, FYI this field is not required and can be left blank")
+
+            if len(v) > 50:
+                raise ValidationError("Your company name must be no more than 50 characters, FYI this field is not required and can be left blank")
+            
+            if not re.match(r'^[A-Za-z \-\'\.]+$', v):
+                raise ValidationError("Your company name must be in alpha characters, FYI this field is not required and can be left blank")
+
+        return v 
+
+    model_config = {
+        "populate_by_name": True,
+        "arbitrary_types_allowed": True,
+        "json_encoders": {ObjectId: str},
+        "json_schema_extra": {
             "example": {
-                "_id": "066de609-b04a-4b30-b46c-32537c7f1f6e",
                 "account_type": 'basic',
                 "email": "george123@yahoo.com",
                 "calendars": ['066de609-b04a-4b30-b46c-32537c7f1f6e', '066de609-b04a-4b30-b46c-32537c7f1f6a'],
@@ -43,6 +151,9 @@ class User(BaseModel):
                 "last_online": "2023-07-27 13:27:25.303335",
                 "notes": ["166de609-b04a-4b30-b32c-32537c7f1f6e"],
                 "password_hashed": "$2b$12$TnK7rTwFqTstmcLLNEtyTuiIRBWBz0k8SNSBCx8yPloZCqkH7uIkG",
+                "pending_chats": [],
+                "pending_tasks": [],
+                "pending_teams": [],
                 "tasks": ["166de609-b04a-4b30-b46c-32537c7f1f6e", "266de609-b04a-4b30-b46c-32537c7f1f6e"],
                 "teams": ["033de609-b04a-4b30-b46c-32537c7f1f6e", "099de609-b04a-4b30-b46c-32537c7f1f6e"],
                 "user_color_preferences": {
@@ -101,105 +212,7 @@ class User(BaseModel):
                 }
             }
         }
-
-    @validator('email')
-    def validate_email(cls, v):
-        # if no email provided return
-        if not v:
-            raise ValidationError("You cannot create an account without an email address")
-        return v
-    
-        # all other email validation can be done through Pydantic's EmailStr type
-
-    @validator('first_name')
-    def validate_first_name(cls, v):
-        # if no first name
-        if not v:
-            raise ValidationError("We cannot create your account without a first name entry")
-    
-        # if first name is too short
-        if len(v) < 1:
-            raise ValidationError("Your first name must be at least 1 character")
-        
-        # if first name is too long
-        if len(v) > 1000:
-            raise ValidationError("first name must be no more than 1000 characters")
-        
-        if not re.match(r'^[A-Za-z \-\'\.]+$', v):
-            raise ValidationError(" first name has too many non-alpha characters")
-            
-        return v
-    
-    @validator('last_name')
-    def validate_last_name(cls, v):
-        # if no last name
-        if not v:
-            raise ValidationError("We cannot create your account without a last name entry")
-    
-        # if last name is too short
-        if len(v) < 1:
-            raise ValidationError("Your last name must be at least 1 character")
-        
-        # if first name is too long
-        if len(v) > 1000:
-            raise ValidationError("Your last name must be no more than 1000 characters")
-        
-        if not re.match(r'^[A-Za-z \-\'\.]+$', v):
-            raise ValidationError("Your last name has too many non-alpha characters")
-            
-        return v
-    
-    @validator('password', pre=True)
-    def validate_password(cls, v):
-        # no password
-        if not v:
-            raise ValidationError("You cannot create an account without adding a password")
-
-        # password is too short
-        if len(v) < 5:
-            raise ValidationError("Your password must be more than 5 characters")
-
-        # password is too long
-        if len(v) > 100:
-            raise ValidationError("your password cannot be more than 100 characters")
-
-        # Match at least 2 numbers and 1 symbol
-        if not re.match(r'^(?=(.*\d.*){2})(?=.*[!@#$%^&*()_+={}[\]:;<>,.?~])', v):
-            raise ValidationError("Your password must have at least 2 numbers and 1 symbol")
-        
-        return v
-    
-    # pre=True runs the validator before value is set on model
-    @validator('job_title', pre=True)
-    def validate_job_title(cls, v):
-        if v is not None:
-            # job title was added validate it
-            print("validating job title", v)
-            if len(v) < 2:
-                raise ValidationError("Your job title entry must be at least 2 characters, FYI this field is not required and can be left blank")
-
-            if len(v) > 50:
-                raise ValidationError("Your job title must be no more than 50 characters, FYI this field is not required and can be left blank")
-
-            if not re.match(r'^[A-Za-z \-\'\.]+$', v):
-                raise ValidationError("Your job title must be in alpha characters, FYI this field is not required and can be left blank")
-
-        return v
-        
-    @validator('company', pre=True)
-    def validate_company(cls, v):
-        if v is not None:
-            # company added
-            if len(v) < 2:
-                raise ValidationError("Your company name entry must be at least 2 characters, FYI this field is not required and can be left blank")
-
-            if len(v) > 50:
-                raise ValidationError("Your company name must be no more than 50 characters, FYI this field is not required and can be left blank")
-            
-            if not re.match(r'^[A-Za-z \-\'\.]+$', v):
-                raise ValidationError("Your company name must be in alpha characters, FYI this field is not required and can be left blank")
-
-        return v
+    }
     
 # Example JSON Data that passes Validation:
 # {

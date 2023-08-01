@@ -1,7 +1,8 @@
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel, Field
-import uuid
+from models.bson_object_id import PyObjectId
+from bson import ObjectId
 
 ## Notes should have the following:
 
@@ -16,24 +17,28 @@ import uuid
 # EACH NOTE MUST BE ASSIGNED TO EITHER A TEAM OR USER, BUT NOT BOTH
 
 class Note(BaseModel):
-    id: str = Field(default_factory=uuid.uuid4, alias="_id")
-    assigned_team: str = Field(default_factory=None)
-    assigned_user: str = Field(default_factory=None)
-    created_on: datetime = Field(default_factory=lambda: datetime.now(), required=True)
-    edits: List[str] = Field(default_factory=list, required=True)
+    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    approved_edits: Optional[List[ObjectId]] = Field(None)
+    assigned_team: Optional[PyObjectId] = Field(None)
+    assigned_user: Optional[PyObjectId] = Field(None)
+    created_by: Optional[PyObjectId] = Field(None)
+    created_on: datetime = Field(default_factory=lambda: datetime.now)
+    edits: Optional[List[PyObjectId]] = Field(default_factory=list)
     note: str = Field(required=True)
-    who_created: str = Field(required=True)
 
-    class Config:
-        populate_by_name = True
-        json_schema_extra = {
+    model_config = {
+        "populate_by_name": True,
+        "arbitrary_types_allowed": True,
+        "json_encoders": {ObjectId: str},
+        "json_schema_extra": {
             "example": {
-                "_id": "066de609-b04a-4b30-b46c-32537c7c2c5n",
-                "assigned_team": "066de609-b04a-4b30-b46c-32537c7c2c5o",
+                "approved_edits": [str(ObjectId()), str(ObjectId())],
+                "assigned_team": str(ObjectId()),
                 "assigned_user": None,
+                "created_by": str(ObjectId()),
                 "created_on": "2023-07-27 13:27:25.303335",
-                "edits": ["066de609-b04a-4b30-b46c-32537c7c2c5p", "066de609-b04a-4b30-b46c-32537c7c2c5q"],
+                "edits": [str(ObjectId()), str(ObjectId())],
                 "note": "<h1>6th Team Meeting</h1><br><p>We talked about nothing</p>",
-                "who_created": "066de609-b04a-4b30-b46c-32537c7c2c5r",
             }
         }
+    }

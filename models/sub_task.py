@@ -1,7 +1,8 @@
 from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, Field
-import uuid
+from models.bson_object_id import PyObjectId
+from bson import ObjectId
 
 ## Sub tasks should have the following:
 
@@ -12,22 +13,26 @@ import uuid
 # users assigned to sub task
 
 class SubTask(BaseModel):
-    id: str = Field(default_factory=uuid.uuid4, alias="_id")
-    assigned_to: str = Field(default_factory=None, required=True)
-    accompanied_task: str = Field(required=True)
-    completed: bool = Field(default_factory=False, required=True)
+    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    assigned_to: Optional[PyObjectId] = Field(None)
+    accompanied_task: Optional[PyObjectId] = Field(None)
+    completed: bool = Field(default_factory=False)
     completed_on: Optional[datetime] = Field(default=None)
-    created_on: datetime = Field(default_factory=lambda: datetime.now(), required=True)
+    created_on: datetime = Field(default_factory=lambda: datetime.now)
+    sub_task: str = Field(required=True)
 
-    class Config:
-        populate_by_name = True
-        json_schema_extra = {
+    model_config = {
+        "populate_by_name": True,
+        "arbitrary_types_allowed": True,
+        "json_encoders": {ObjectId: str},
+        "json_schema_extra": {
             "example": {
-                "_id": "066de609-b04a-1a29-c57d-32537c7f1f6e",
-                "assigned_to": "066de123-b04a-1a29-c57d-32537c7f1f6e",
-                "accompanied_task": "066de153-b04a-1a29-c57d-32537c7f1f6e",
+                "assigned_to": str(ObjectId()),
+                "accompanied_task": str(ObjectId()),
                 "completed": False,
                 "completed_on": None,
                 "created_on": "2023-07-27 13:27:25.303335",
+                "sub_task": "Buy materials"
             }
         }
+    }

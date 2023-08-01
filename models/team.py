@@ -1,6 +1,7 @@
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel, Field
-import uuid
+from models.bson_object_id import PyObjectId
+from bson import ObjectId
 
 # To keep data clean, teams need to hold the majority of the data to keep user data low
 ## Teams should have the following:
@@ -13,22 +14,28 @@ import uuid
 ### color scheme set by group
 
 class Team(BaseModel):
-    id: str = Field(default_factory=uuid.uuid4, alias="_id")
-    calendar: str = Field(required=True)
-    notes: List[str] = Field(default_factory=list, required=True)
-    tasks: List[str] = Field(default_factory=list, required=True)
-    team_lead: str
-    users: List[str] = Field(default_factory=list, required=True)
+    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    calendar: Optional[PyObjectId] = Field(None)
+    notes: Optional[List[PyObjectId]] = Field(default_factory=list)
+    notifications: Optional[List[PyObjectId]] = Field(None)
+    tasks: Optional[List[PyObjectId]] = Field(default_factory=list)
+    team_lead: Optional[PyObjectId] = Field(None)
+    users: Optional[List[PyObjectId]] = Field(default_factory=list)
+    pending_users: Optional[List[PyObjectId]] = Field(default_factory=list)
 
-    class Config:
-        populate_by_name = True
-        json_schema_extra = {
+    model_config = {
+        "populate_by_name": True,
+        "arbitrary_types_allowed": True,
+        "json_encoders": {ObjectId: str},
+        "json_schema_extra": {
             "example": {
-                "_id": "066de500-a02a-4b30-b46c-32537c7f1f6e",
-                "calendar": "066de501-a02a-4b30-b46c-32537c7f1f6e",
-                "notes": ["066de500-a02a-4b30-b46c-32537c7f1f7d", "066de500-a02a-4b30-b46c-32537c7f1f7y"],
-                "tasks": ["066de500-a02a-4b30-b46c-12337c7f1f6e", "066de500-a02a-4b30-b46c-98737c7f1f6e"],
-                "team_lead": "066de500-a02a-4b30-b46c-32537c6d1f6e",
-                "users": ["011de500-a02a-4b30-b46c-32537c7f1f6e", "066de500-a02a-5c30-b46c-32537c7f1f6e"]
+                "calendar": str(ObjectId()),
+                "notes": [str(ObjectId()), str(ObjectId())],
+                "notifications": [str(ObjectId()), str(ObjectId()), str(ObjectId()), str(ObjectId()), str(ObjectId())],
+                "tasks": [str(ObjectId()), str(ObjectId())],
+                "team_lead": str(ObjectId()),
+                "users": [str(ObjectId()), str(ObjectId())],
+                "pending_users": [str(ObjectId()), str(ObjectId()), str(ObjectId())]
             }
         }
+    }

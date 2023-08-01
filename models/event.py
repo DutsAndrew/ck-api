@@ -1,5 +1,7 @@
 from pydantic import BaseModel, Field
-import uuid
+from models.bson_object_id import PyObjectId
+from bson import ObjectId
+from typing import Optional
 
 # Events should have the following:
 
@@ -9,18 +11,20 @@ import uuid
 # color-scheme set by user
 
 class Event(BaseModel):
-    id: str = Field(default_factory=uuid.uuid4, alias="_id")
-    calendar: str = Field(required=True)
-    created_by: str = Field(required=True)
-    patterns = str = Field(default_factory=None, required=True)
+    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    calendar: Optional[PyObjectId] = Field(None)
+    created_by: Optional[PyObjectId] = Field(None)
+    patterns: Optional[str] = Field(None)
 
-    class Config:
-        populate_by_name = True
-        json_schema_extra = {
+    model_config= {
+        "populate_by_name": True,
+        "arbitrary_types_allowed": True,
+        "json_encoders": {ObjectId: str},
+        "json_schema_extra": {
             "example": {
-                "_id": "066de609-b04a-4b30-b46c-32537z6e6g1l",
-                "calendar": "066de609-b04a-4b30-b46c-32537z6e6g1y",
-                "created_by": "066de609-b04a-4b30-b46c-32537z6e6g1i",
+                "calendar": str(ObjectId()),
+                "created_by": str(ObjectId()),
                 "patterns": None,
             }
         }
+    }
