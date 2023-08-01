@@ -22,7 +22,6 @@ class UserColorScheme(BaseModel):
         }
     }
 
-
 class ColorScheme(BaseModel):
     apply_to_which_object_id: Optional[str]
     font_color: Optional[str]
