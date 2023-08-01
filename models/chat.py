@@ -21,7 +21,7 @@ class Chat(BaseModel):
     mode_config = {
         "populate_by_name": True,
         "arbitrary_types_allowed": True,
-        "json_encoders": {ObjectId: str}, # Map ObjectId to the str encoder func
+        "json_encoders": {ObjectId: str, PyObjectId: str}, # Map ObjectId to the str encoder func
         "json_schema_extra": {
             "example": {
                 "messages": [str(ObjectId())],

@@ -9,7 +9,7 @@ async def sign_up(request: Request, user: User):
 
     # check if email has already been registered
     try:
-        user_lookup = await request.app.database['users'].find_one(
+        user_lookup = await request.app.db['users'].find_one(
             {"email": user.email}
         )
         if user_lookup is not None:
@@ -39,24 +39,18 @@ async def sign_up(request: Request, user: User):
 
             # begin uploading user to db
             try: 
-                upload_user = await request.app.database["users"].insert_one(user_data)
+                upload_user = await request.app.db["users"].insert_one(user_data)
                 if upload_user:
-                    find_user = await request.app.database["users"].find_one({"_id": user.id})
-                    if find_user is not None:
-                        strip_sensitive_user_data = {
-                            "email": find_user.email,
-                            "first_name": find_user.first_name,
-                            "last_name": find_user.last_name,
-                        }
-                        return {
-                            "message": "Success, we created your account",
-                            "success": True,
-                            "user": strip_sensitive_user_data,
-                        }
-                    else:
-                        return {
-                            "message": "There was an issue creating your account, please try again later"
-                        }
+                    strip_sensitive_user_data = {
+                        "email": user.email,
+                        "first_name": user.first_name,
+                        "last_name": user.last_name,
+                    }
+                    return {
+                        "message": "Success, we created your account",
+                        "success": True,
+                        "user": strip_sensitive_user_data,
+                    }
                 else:
                     return {
                         "message": "Failed to save user",
@@ -83,5 +77,5 @@ async def sign_up(request: Request, user: User):
             
     except Exception as e:
         return {
-            "message": f"We could not confirm that email address and had to abort, the error was: {e}"
+            "message": f"There was a server side issue processing this request, the error was: {e}"
         }

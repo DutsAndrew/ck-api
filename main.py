@@ -17,7 +17,7 @@ def get_app_for_testing():
 
 async def setup_db_client():
     app.mongodb_client = AsyncIOMotorClient(config["MONGO_URI"])
-    app.database = app.mongodb_client[config["DB_NAME"]]
+    app.db = app.mongodb_client[config["DB_NAME"]]
     print("Connected to MongoDB!")
     return app # return app instance after setting up db for testing files
 

@@ -19,7 +19,7 @@ class Event(BaseModel):
     model_config= {
         "populate_by_name": True,
         "arbitrary_types_allowed": True,
-        "json_encoders": {ObjectId: str},
+        "json_encoders": {ObjectId: str, PyObjectId: str},
         "json_schema_extra": {
             "example": {
                 "calendar": str(ObjectId()),

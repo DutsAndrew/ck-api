@@ -11,21 +11,21 @@ class User(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     account_type: str = Field(default='basic')
     email: EmailStr = Field(required=True)
-    calendars: List[str] = Field(default_factory=list)
-    chats: List[str] = Field(default_factory=list)
+    calendars: Optional[List[PyObjectId]] = Field(default_factory=list)
+    chats: Optional[List[PyObjectId]] = Field(default_factory=list)
     company: Optional[str] = Field(default_factory=None)
     first_name: str = Field(required=True)
     joined: datetime = Field(default_factory=lambda: datetime.now())
     job_title: Optional[str] = Field(default=None)
     last_name: str = Field(required=True)
     last_online: datetime = Field(default_factory=lambda: datetime.now())
-    notes: List[str] = Field(default_factory=list)
+    notes: Optional[List[PyObjectId]] = Field(default_factory=list)
     password: str = Field(required=True)
     pending_chats: Optional[List[PyObjectId]] = Field(default_factory=list)
     pending_tasks: Optional[List[PyObjectId]] = Field(default_factory=list)
     pending_teams: Optional[List[PyObjectId]] = Field(default_factory=list)
-    tasks: List[str] = Field(default_factory=list)
-    teams: List[str] = Field(default_factory=list)
+    tasks: Optional[List[PyObjectId]] = Field(default_factory=list)
+    teams: Optional[List[PyObjectId]] = Field(default_factory=list)
     user_color_preferences: UserColorPreferences = Field(default_factory=lambda: UserColorPreferences())
     verified_email: bool = Field(default=False)
 
@@ -136,26 +136,26 @@ class User(BaseModel):
     model_config = {
         "populate_by_name": True,
         "arbitrary_types_allowed": True,
-        "json_encoders": {ObjectId: str},
+        "json_encoders": {ObjectId: str, PyObjectId: str},
         "json_schema_extra": {
             "example": {
                 "account_type": 'basic',
                 "email": "george123@yahoo.com",
-                "calendars": ['066de609-b04a-4b30-b46c-32537c7f1f6e', '066de609-b04a-4b30-b46c-32537c7f1f6a'],
-                "chats": ["066de609-b04a-4b30-b46c-32537c7f1g6e", "066de609-b04a-4b30-b46c-32537c7h1f6e"],
+                "calendars": [str(ObjectId()), str(ObjectId())],
+                "chats": [str(ObjectId()), str(ObjectId())],
                 "company": None,
                 "first_name": "Kathy",
                 "joined": "2023-07-27 13:27:25.303335",
                 "job_title": None,
                 "last_name": "Bean",
                 "last_online": "2023-07-27 13:27:25.303335",
-                "notes": ["166de609-b04a-4b30-b32c-32537c7f1f6e"],
-                "password_hashed": "$2b$12$TnK7rTwFqTstmcLLNEtyTuiIRBWBz0k8SNSBCx8yPloZCqkH7uIkG",
+                "notes": [str(ObjectId()), str(ObjectId()), str(ObjectId()), str(ObjectId()), str(ObjectId())],
+                "password": "$2b$12$TnK7rTwFqTstmcLLNEtyTuiIRBWBz0k8SNSBCx8yPloZCqkH7uIkG",
                 "pending_chats": [],
                 "pending_tasks": [],
                 "pending_teams": [],
-                "tasks": ["166de609-b04a-4b30-b46c-32537c7f1f6e", "266de609-b04a-4b30-b46c-32537c7f1f6e"],
-                "teams": ["033de609-b04a-4b30-b46c-32537c7f1f6e", "099de609-b04a-4b30-b46c-32537c7f1f6e"],
+                "tasks": [str(ObjectId()), str(ObjectId())],
+                "teams": [str(ObjectId())],
                 "user_color_preferences": {
                     "calendars": [
                         {
