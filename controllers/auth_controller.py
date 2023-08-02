@@ -45,6 +45,8 @@ async def sign_up(request: Request, user: User):
                         "email": user.email,
                         "first_name": user.first_name,
                         "last_name": user.last_name,
+                        "job_title": user.job_title if hasattr(user, 'job_title') else None,
+                        "company": user.company if hasattr(user, 'company') else None,
                     }
                     return {
                         "message": "Success, we created your account",

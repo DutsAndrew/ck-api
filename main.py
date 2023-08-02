@@ -6,18 +6,13 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from routes.api_routes import api_router
 from routes.app_routes import app_router
 
-# get .env files
-config = dotenv_values(".env")
-
 app = FastAPI()
 
-def get_app_for_testing():
-    mongo_client = AsyncIOMotorClient("mongodb://localhost:27017")
-    app.mongo_client = mongo_client  # Set the mongo_client attribute
-
 async def setup_db_client():
-    app.mongodb_client = AsyncIOMotorClient(config["MONGO_URI"])
-    app.db = app.mongodb_client[config["DB_NAME"]]
+    # get .env files
+    config = dotenv_values(".env")
+    app.mongodb_client = AsyncIOMotorClient(config["DEV_MONGO_URI"])
+    app.db = app.mongodb_client[config["DEV_DB_NAME"]]
     print("Connected to MongoDB!")
     return app # return app instance after setting up db for testing files
 
