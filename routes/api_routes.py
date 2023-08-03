@@ -5,7 +5,7 @@ from controllers import calendar_controller, jenkins_ai_controller
 from controllers import messaging_controller, notes_controller, pages_controller
 from controllers import tasks_controller, teams_controller
 
-from models.user import User
+from models.user import User, UserLogin
 
 api_router = APIRouter()
 
@@ -18,3 +18,7 @@ async def get_api():
 @api_router.post('/signup')
 async def post_signup(request: Request, user: User):
     return await auth_controller.sign_up(request, user)
+
+@api_router.post('/login')
+async def post_login(request: Request, user_login: UserLogin):
+    return await auth_controller.user_login(request, user_login)

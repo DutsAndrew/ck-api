@@ -214,6 +214,10 @@ class User(BaseModel):
             }
         }
     }
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
     
 # Example JSON Data that passes Validation:
 # {

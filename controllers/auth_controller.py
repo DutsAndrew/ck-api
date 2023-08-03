@@ -1,12 +1,11 @@
-from models.user import User
-from fastapi import Request
+from models.user import User, UserLogin
+from fastapi import Request, HTTPException
+from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
+from scripts.jwt_token_encoders import encode_session_token, encode_refresh_token
 import bcrypt
 
 async def sign_up(request: Request, user: User):
-    # form has been validated with the User model, each user object passed in should have the following:
-    # email, first_name, last_name, request.body.get('password'), and 2 optional fields: job_title and company
-
     # check if email has already been registered
     try:
         user_lookup = await request.app.db['users'].find_one(
@@ -80,4 +79,32 @@ async def sign_up(request: Request, user: User):
     except Exception as e:
         return {
             "message": f"There was a server side issue processing this request, the error was: {e}"
+        }
+    
+async def user_login(request: Request, user_login: UserLogin):
+    try:
+        user_lookup = await request.app.db['users'].find_one({
+            "email": user_login.email,
+        })
+
+        if user_lookup is None or not bcrypt.checkpw(user_login.password, user_lookup.password):
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+            
+        access_token = encode_session_token(user_login)
+        refresh_token = encode_refresh_token(user_login, user_lookup._id)
+
+        response = JSONResponse({
+            "message": "You have been successfully logged in",
+            "refresh_token": refresh_token,
+            "status": True,
+        })
+        response.set_cookie("access_token", access_token, httponly=True, secure=True, samesite="Lax")
+
+        return response
+
+
+    except Exception as e:
+        return {
+            "message": f"There was a server error processing your request, the error was: {e}",
+            "errors": e,
         }

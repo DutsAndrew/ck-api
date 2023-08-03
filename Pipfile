@@ -61,6 +61,7 @@ toml = "==0.10.2"
 tomli = "==2.0.1"
 virtualenv = "==20.24.2"
 bump-pydantic = "*"
+pyjwt = "*"
 
 [dev-packages]
 
