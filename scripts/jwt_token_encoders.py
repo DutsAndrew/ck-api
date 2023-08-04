@@ -1,6 +1,6 @@
 from models.user import UserLogin
-from datetime import datetime
 from dotenv import dotenv_values
+from datetime import datetime, timedelta
 import uuid
 import jwt
 
@@ -18,8 +18,8 @@ def encode_session_token(user_login: UserLogin):
     # generate session token
     access_payload = {
         "email": user_login.email,
-        "sub": uuid.uuid4(),
-        "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=15) # access token is only open for 15 minutes
+        "sub": str(uuid.uuid4()),
+        "exp": datetime.utcnow() + timedelta(minutes=30) # access token is only open for 15 minutes
     }
 
     access_token = jwt.encode(
@@ -36,7 +36,7 @@ def encode_refresh_token(user_login: UserLogin, user_id: str):
     # generate refresh token
     refresh_payload = {
         "sub": user_id,
-        "exp": datetime.datetime.utcnow() + datetime.timedelta(days=7) # 7 days from now
+        "exp": datetime.utcnow() + timedelta(days=7) # 7 days from now
     }
 
     refresh_token = jwt.encode(

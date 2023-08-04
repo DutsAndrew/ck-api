@@ -6,7 +6,6 @@ from models.bson_object_id import PyObjectId
 from bson import ObjectId
 import re
 
-
 class User(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     account_type: str = Field(default='basic')

@@ -72,11 +72,14 @@ async def user_login(request: Request, user_login: UserLogin):
             "email": user_login.email,
         })
 
-        if user_lookup is None or not bcrypt.checkpw(user_login.password, user_lookup.password):
+        if user_lookup is None or not bcrypt.checkpw(
+            user_login.password.encode(), 
+            user_lookup['password'].encode()
+        ):
             raise HTTPException(status_code=401, detail="Invalid email or password")
-            
+                    
         access_token = encode_session_token(user_login)
-        refresh_token = encode_refresh_token(user_login, user_lookup._id)
+        refresh_token = encode_refresh_token(user_login, user_lookup['_id'])
 
         response = JSONResponse({
             "message": "You have been successfully logged in",
@@ -90,6 +93,6 @@ async def user_login(request: Request, user_login: UserLogin):
 
     except Exception as e:
         return {
-            "message": f"There was a server error processing your request, the error was: {e}",
+            "message": "There was a server error processing your request",
             "errors": e,
         }
