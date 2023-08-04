@@ -3,8 +3,17 @@ from dotenv import dotenv_values
 from motor.motor_asyncio import AsyncIOMotorClient
 
 # import routes
-from routes.api_routes import api_router
+from routes.account_routes import account_router
+from routes.announcement_routes import announcement_router
 from routes.app_routes import app_router
+from routes.auth_routes import auth_router
+from routes.calendar_routes import calendar_router
+from routes.jenkins_ai_routes import jenkins_ai_router
+from routes.messaging_routes import messaging_router
+from routes.notes_routes import notes_router
+from routes.pages_routes import pages_router
+from routes.tasks_routes import tasks_router
+from routes.teams_routes import teams_router
 
 app = FastAPI()
 
@@ -27,8 +36,18 @@ async def startup_event():
 async def shutdown_event():
     await shutdown_db_client()
 
+# link in all routes to app
+app.include_router(account_router, tags=["account"], prefix="/account")
+app.include_router(announcement_router, tags=["announcement"], prefix="/announcement")
 app.include_router(app_router)
-app.include_router(api_router, tags=["api"], prefix="/api")
+app.include_router(auth_router, tags=["auth"], prefix="/auth")
+app.include_router(calendar_router, tags=["calendar"], prefix="/calendar")
+app.include_router(jenkins_ai_router, tags=["jenkins-ai"], prefix="/jenkins-ai")
+app.include_router(messaging_router, tags=["message"], prefix="/message")
+app.include_router(notes_router, tags=["note"], prefix="/note")
+app.include_router(pages_router, tags=["page"], prefix="/page")
+app.include_router(tasks_router, tags=["task"], prefix="/task")
+app.include_router(teams_router, tags=["team"], prefix="/team")
 
 # start sever from CLI with:
 # python -m uvicorn main:app --reload
