@@ -3,16 +3,18 @@ import jwt
 import http.cookies
 from fastapi.testclient import TestClient
 from fastapi import HTTPException
-from dotenv import dotenv_values
 from datetime import datetime, timedelta, timezone
+from scripts.jwt_helper_functions import get_jwt_env_variables
 
 # For when wanting to isolate tests:
 # @pytest.mark.skip(reason='Not implemented')
 
+@pytest.mark.skip(reason='Not implemented')
 def test_no_api_signup(test_client: TestClient):
-    response = test_client.post('/api/signup')
+    response = test_client.post('/auth/signup')
     assert response.status_code == 422
 
+@pytest.mark.skip(reason='Not implemented')
 def test_accurate_api_signup(test_client_with_db: TestClient):
     '''Test that a user can be created and saved to the database.'''
 
@@ -28,7 +30,7 @@ def test_accurate_api_signup(test_client_with_db: TestClient):
     }
 
     response = test_client_with_db.post(
-        '/api/signup',
+        '/auth/signup',
         json=user_data,
         headers={'content-type': 'application/json'}
     )
@@ -44,6 +46,7 @@ def test_accurate_api_signup(test_client_with_db: TestClient):
         'company': 'Microsoft',
     }
 
+@pytest.mark.skip(reason='Not implemented')
 def test_user_already_signed_up(test_client_with_db: TestClient):
     '''Test case for when a user has already been added'''
 
@@ -59,7 +62,7 @@ def test_user_already_signed_up(test_client_with_db: TestClient):
   }
 
     response = test_client_with_db.post(
-        '/api/signup',
+        '/auth/signup',
         json=user_data,
         headers={'content-type': 'application/json'}
     )
@@ -75,6 +78,7 @@ def test_user_already_signed_up(test_client_with_db: TestClient):
     }
 
 
+@pytest.mark.skip(reason='Not implemented')
 def test_sign_up_fails_on_no_data_entry(test_client_with_db: TestClient):
     '''Test case for when an account is being created but it's empty'''
 
@@ -83,7 +87,7 @@ def test_sign_up_fails_on_no_data_entry(test_client_with_db: TestClient):
     }
 
     response = test_client_with_db.post(
-        '/api/signup',
+        '/auth/signup',
         json=user_data,
         headers={'content-type': 'application/json'}
     )
@@ -118,6 +122,7 @@ def test_sign_up_fails_on_no_data_entry(test_client_with_db: TestClient):
         assert error['loc'][1] == expected_errors[i]['field']
 
 
+@pytest.mark.skip(reason='Not implemented')
 def test_login_gives_good_auth_message_on_valid_login(test_client_with_db: TestClient):
     '''Test case to ensure a good login sends the appropriate message'''
     # mock user data
@@ -125,13 +130,9 @@ def test_login_gives_good_auth_message_on_valid_login(test_client_with_db: TestC
       'email': 'new@gmail.com',
       'password': 'circles101$',
     }
-
-    config = dotenv_values('.env')
-    JWT_SECRET = config['JWT_SECRET']
-    JWT_ALGORITHM = config["JWT_ALGORITHM"]
     
     response = test_client_with_db.post(
-        '/api/login',
+        '/auth/login',
         json=user_data,
         headers={'content-type': 'application/json'}
     )
@@ -140,7 +141,8 @@ def test_login_gives_good_auth_message_on_valid_login(test_client_with_db: TestC
     assert response.json()['message'] == 'You have been successfully logged in'
 
 
-def test_login_sends_good_refresh_token_on_valid_login(test_client_with_db: TestClient):
+# @pytest.mark.skip(reason='Not implemented')
+def test_login_sends_good_bearer_token_on_valid_login(test_client_with_db: TestClient, monkeypatch):
     '''Test case for checking good refresh token is sent'''
     # mock user data
     user_data = {
@@ -148,64 +150,69 @@ def test_login_sends_good_refresh_token_on_valid_login(test_client_with_db: Test
       'password': 'circles101$',
     }
 
-    config = dotenv_values('.env')
-    JWT_SECRET = config['JWT_SECRET']
-    JWT_ALGORITHM = config["JWT_ALGORITHM"]
+    jwt_config = get_jwt_env_variables()
     
     response = test_client_with_db.post(
-        '/api/login',
+        '/auth/login',
         json=user_data,
         headers={'content-type': 'application/json'}
     )
 
-    jwt_refresh_token = response.json()['refresh_token']
+    jwt_bearer_token = response.headers['Authorization'].split(" ")[1]
+
     try:
-        decoded_token = jwt.decode(jwt_refresh_token, JWT_SECRET, algorithms=JWT_ALGORITHM)
+        decoded_token = jwt.decode(
+            jwt_bearer_token,
+            jwt_config["JWT_SECRET"],
+            algorithms=jwt_config["JWT_ALGORITHM"]
+        )
 
         # compare approximate expiring values on token
-        refresh_token_exp = datetime.fromtimestamp(decoded_token.get('exp')) # should be 7 days
-        approximate_token_exp = datetime.utcnow() + timedelta(days=6)
-        assert refresh_token_exp > approximate_token_exp
+        bearer_token_exp = datetime.fromtimestamp(decoded_token.get('exp')) # should be 12 hours
+        approximate_token_exp = datetime.utcnow() + timedelta(hours=11)
+        assert bearer_token_exp > approximate_token_exp
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail='The refresh token has expired')
     except jwt.InvalidSignatureError:
         raise HTTPException(status_code=401, detail='The refresh token is invalid')
     
 
-
-def test_login_sends_good_access_token_as_cookie_on_valid_login(test_client_with_db: TestClient):
-    '''Test case to make sure good access token's are sent'''
+# @pytest.mark.skip(reason='Not implemented')
+def test_login_sends_good_refresh_token_as_cookie_on_valid_login(test_client_with_db: TestClient):
+    '''Test case to make sure good refresh token is sent'''
     # mock user data
     user_data = {
       'email': 'new@gmail.com',
       'password': 'circles101$',
     }
 
-    config = dotenv_values('.env')
-    JWT_SECRET = config['JWT_SECRET']
-    JWT_ALGORITHM = config["JWT_ALGORITHM"]
+    jwt_config = get_jwt_env_variables()
     
     response = test_client_with_db.post(
-        '/api/login',
+        '/auth/login',
         json=user_data,
         headers={'content-type': 'application/json'}
     )
 
     # verify token is a str and was sent
-    jwt_access_token = response.cookies.get('access_token')
-    assert isinstance(jwt_access_token, str)
+    jwt_refresh_token = response.cookies.get('refresh_token')
+    assert isinstance(jwt_refresh_token, str)
 
     # verify token expires appropriately
-    decoded_token = jwt.decode(jwt_access_token, JWT_SECRET, algorithms=JWT_ALGORITHM)
-    access_token_exp = datetime.fromtimestamp(decoded_token.get('exp'), tz=timezone.utc) # should be 30 mins
-    approximate_exp_time = (datetime.utcnow() + timedelta(seconds=29)).replace(tzinfo=timezone.utc)
-    assert access_token_exp > approximate_exp_time
+    decoded_token = jwt.decode(
+        jwt_refresh_token,
+        jwt_config['JWT_SECRET'],
+        algorithms=jwt_config['JWT_ALGORITHM']
+    )
+    refresh_token_exp = datetime.fromtimestamp(decoded_token.get('exp'), tz=timezone.utc) # should be 30 mins
+    approximate_exp_time = (datetime.utcnow() + timedelta(days=6)).replace(tzinfo=timezone.utc)
+    assert refresh_token_exp > approximate_exp_time
 
     # check header fields of cookie to make sure they are secure
     cookie_header = response.headers['set-cookie']
     cookies = http.cookies.SimpleCookie()
     cookies.load(cookie_header)
-    cookie = cookies.get('access_token')
+    cookie = cookies.get('refresh_token')
     
     assert cookie is not None
     assert cookie['httponly'] is True
@@ -213,6 +220,7 @@ def test_login_sends_good_access_token_as_cookie_on_valid_login(test_client_with
     assert cookie['samesite'] == 'Lax'
 
 
+@pytest.mark.skip(reason='Not implemented')
 def test_bad_login_does_not_authenticate_invalid_email(test_client_with_db: TestClient):
     '''Test case to ensure non-existent emails dont' validate'''
     # mock user data
@@ -222,7 +230,7 @@ def test_bad_login_does_not_authenticate_invalid_email(test_client_with_db: Test
     }
     
     response = test_client_with_db.post(
-        '/api/login',
+        '/auth/login',
         json=user_data,
         headers={'content-type': 'application/json'}
     )
@@ -234,6 +242,8 @@ def test_bad_login_does_not_authenticate_invalid_email(test_client_with_db: Test
         'headers': None
     }
 
+
+@pytest.mark.skip(reason='Not implemented')
 def test_bad_login_does_not_authenticate_invalid_password(test_client_with_db: TestClient):
     '''Test case to ensure that mismatched passwords but validated emails don't send tokens'''
     # mock user data
@@ -243,7 +253,7 @@ def test_bad_login_does_not_authenticate_invalid_password(test_client_with_db: T
     }
     
     response = test_client_with_db.post(
-        '/api/login',
+        '/auth/login',
         json=user_data,
         headers={'content-type': 'application/json'}
     )

@@ -1,42 +1,41 @@
 from models.user import UserLogin
-from dotenv import dotenv_values
 from datetime import datetime, timedelta
-import uuid
+from scripts.jwt_helper_functions import get_jwt_env_variables
 import jwt
+import uuid
 
-def get_env_variables():
-    config = dotenv_values('.env')
-    jwt_config = {
-        "JWT_SECRET": config["JWT_SECRET"],
-        "JWT_ALGORITHM": config["JWT_ALGORITHM"]
-    }
-    return jwt_config
+def encode_bearer_token(user_login: UserLogin):
+    jwt_config = get_jwt_env_variables()
 
-def encode_session_token(user_login: UserLogin):
-    jwt_config = get_env_variables()
+    # get timestamp value for jwt.encode()
+    exp_time = datetime.utcnow() + timedelta(hours=12)
+    exp_timestamp = exp_time.timestamp()
 
-    # generate session token
-    access_payload = {
+    # generate bearer token
+    bearer_payload = {
         "email": user_login.email,
         "sub": str(uuid.uuid4()),
-        "exp": datetime.utcnow() + timedelta(minutes=30) # access token is only open for 15 minutes
+        "exp": (datetime.utcnow() + timedelta(hours=12)).timestamp(),
+        "issued_at": datetime.utcnow().timestamp(),
     }
 
-    access_token = jwt.encode(
-        access_payload,
+    bearer_token = jwt.encode(
+        bearer_payload,
         jwt_config["JWT_SECRET"],
         algorithm=jwt_config["JWT_ALGORITHM"],
     )
 
-    return access_token
+    return bearer_token
     
-def encode_refresh_token(user_login: UserLogin, user_id: str):
-    jwt_config = get_env_variables()
+
+def encode_refresh_token(user_id):
+    jwt_config = get_jwt_env_variables()
 
     # generate refresh token
     refresh_payload = {
         "sub": user_id,
-        "exp": datetime.utcnow() + timedelta(days=7) # 7 days from now
+        "exp": (datetime.utcnow() + timedelta(days=30)).timestamp(),
+        "issued_at": datetime.utcnow().timestamp(),
     }
 
     refresh_token = jwt.encode(
@@ -46,3 +45,4 @@ def encode_refresh_token(user_login: UserLogin, user_id: str):
     )
 
     return refresh_token
+

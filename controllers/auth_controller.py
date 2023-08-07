@@ -2,7 +2,7 @@ from models.user import User, UserLogin
 from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
-from scripts.jwt_token_encoders import encode_session_token, encode_refresh_token
+from scripts.jwt_token_encoders import encode_bearer_token, encode_refresh_token
 import bcrypt
 
 async def sign_up(request: Request, user: User):
@@ -77,16 +77,16 @@ async def user_login(request: Request, user_login: UserLogin):
             user_lookup['password'].encode()
         ):
             raise HTTPException(status_code=401, detail="Invalid email or password")
-                    
-        access_token = encode_session_token(user_login)
-        refresh_token = encode_refresh_token(user_login, user_lookup['_id'])
+        
+        bearer_token = encode_bearer_token(user_login)
+        refresh_token = encode_refresh_token(user_lookup['_id'])
 
         response = JSONResponse({
             "message": "You have been successfully logged in",
-            "refresh_token": refresh_token,
             "status": True,
         })
-        response.set_cookie("access_token", access_token, httponly=True, secure=True, samesite="Lax")
+        response.headers["Authorization"] = f"Bearer {bearer_token}"
+        response.set_cookie("refresh_token", refresh_token, httponly=True, secure=True, samesite="Lax")
 
         return response
 
