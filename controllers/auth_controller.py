@@ -85,6 +85,7 @@ async def user_login(request: Request, user_login: UserLogin):
             "message": "You have been successfully logged in",
             "status": True,
         })
+
         response.headers["Authorization"] = f"Bearer {bearer_token}"
         response.set_cookie("refresh_token", refresh_token, httponly=True, secure=True, samesite="Lax")
 

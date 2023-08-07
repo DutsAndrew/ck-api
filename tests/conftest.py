@@ -1,4 +1,5 @@
 import pytest
+import certifi
 from fastapi.testclient import TestClient
 from motor.motor_asyncio import AsyncIOMotorClient
 from main import app as main_app
@@ -13,7 +14,7 @@ def test_client():
 def test_client_with_db():
     # Use AsyncIOMotorClient for in-memory MongoDB
     config = dotenv_values(".env")
-    mongodb_client = AsyncIOMotorClient(config["DEV_MONGO_URI"])
+    mongodb_client = AsyncIOMotorClient(config["DEV_MONGO_URI"], tlsCAFile=certifi.where())
     db = mongodb_client[config["DEV_DB_NAME"]]
 
     # Inject the db instance into your FastAPI app

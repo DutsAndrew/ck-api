@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from dotenv import dotenv_values
 from motor.motor_asyncio import AsyncIOMotorClient
+import certifi
 
 # import routes
 from routes.account_routes import account_router
@@ -20,7 +21,7 @@ app = FastAPI()
 async def setup_db_client():
     # get .env files
     config = dotenv_values(".env")
-    app.mongodb_client = AsyncIOMotorClient(config["DEV_MONGO_URI"])
+    app.mongodb_client = AsyncIOMotorClient(config["DEV_MONGO_URI"], tlsCAFile=certifi.where())
     app.db = app.mongodb_client[config["DEV_DB_NAME"]]
     print("Connected to MongoDB!")
     return app # return app instance after setting up db for testing files
