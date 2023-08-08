@@ -6,15 +6,12 @@ from fastapi import HTTPException
 from datetime import datetime, timedelta, timezone
 from scripts.jwt_helper_functions import get_jwt_env_variables
 
-# For when wanting to isolate tests:
 # @pytest.mark.skip(reason='Not implemented')
-
-@pytest.mark.skip(reason='Not implemented')
 def test_no_api_signup(test_client: TestClient):
     response = test_client.post('/auth/signup')
     assert response.status_code == 422
 
-@pytest.mark.skip(reason='Not implemented')
+# @pytest.mark.skip(reason='Not implemented')
 def test_accurate_api_signup(test_client_with_db: TestClient):
     '''Test that a user can be created and saved to the database.'''
 
@@ -46,7 +43,7 @@ def test_accurate_api_signup(test_client_with_db: TestClient):
         'company': 'Microsoft',
     }
 
-@pytest.mark.skip(reason='Not implemented')
+# @pytest.mark.skip(reason='Not implemented')
 def test_user_already_signed_up(test_client_with_db: TestClient):
     '''Test case for when a user has already been added'''
 
@@ -78,7 +75,7 @@ def test_user_already_signed_up(test_client_with_db: TestClient):
     }
 
 
-@pytest.mark.skip(reason='Not implemented')
+# @pytest.mark.skip(reason='Not implemented')
 def test_sign_up_fails_on_no_data_entry(test_client_with_db: TestClient):
     '''Test case for when an account is being created but it's empty'''
 
@@ -122,7 +119,7 @@ def test_sign_up_fails_on_no_data_entry(test_client_with_db: TestClient):
         assert error['loc'][1] == expected_errors[i]['field']
 
 
-@pytest.mark.skip(reason='Not implemented')
+# @pytest.mark.skip(reason='Not implemented')
 def test_login_gives_good_auth_message_on_valid_login(test_client_with_db: TestClient):
     '''Test case to ensure a good login sends the appropriate message'''
     # mock user data
@@ -141,7 +138,7 @@ def test_login_gives_good_auth_message_on_valid_login(test_client_with_db: TestC
     assert response.json()['message'] == 'You have been successfully logged in'
 
 
-# @pytest.mark.skip(reason='Not implemented')
+@pytest.mark.skip(reason='Not implemented')
 def test_login_sends_good_bearer_token_on_valid_login(test_client_with_db: TestClient, monkeypatch):
     '''Test case for checking good refresh token is sent'''
     # mock user data
@@ -177,7 +174,7 @@ def test_login_sends_good_bearer_token_on_valid_login(test_client_with_db: TestC
         raise HTTPException(status_code=401, detail='The refresh token is invalid')
     
 
-# @pytest.mark.skip(reason='Not implemented')
+@pytest.mark.skip(reason='Not implemented')
 def test_login_sends_good_refresh_token_as_cookie_on_valid_login(test_client_with_db: TestClient):
     '''Test case to make sure good refresh token is sent'''
     # mock user data
@@ -220,7 +217,7 @@ def test_login_sends_good_refresh_token_as_cookie_on_valid_login(test_client_wit
     assert cookie['samesite'] == 'Lax'
 
 
-@pytest.mark.skip(reason='Not implemented')
+# @pytest.mark.skip(reason='Not implemented')
 def test_bad_login_does_not_authenticate_invalid_email(test_client_with_db: TestClient):
     '''Test case to ensure non-existent emails dont' validate'''
     # mock user data
@@ -243,7 +240,7 @@ def test_bad_login_does_not_authenticate_invalid_email(test_client_with_db: Test
     }
 
 
-@pytest.mark.skip(reason='Not implemented')
+# @pytest.mark.skip(reason='Not implemented')
 def test_bad_login_does_not_authenticate_invalid_password(test_client_with_db: TestClient):
     '''Test case to ensure that mismatched passwords but validated emails don't send tokens'''
     # mock user data
