@@ -8,9 +8,9 @@ account_router = APIRouter()
 @account_router.get('/')
 async def get_welcome():
     return {
-        "Not Implemented"
+        "use the /account route to perform various account CRUD operations"
     }
 
 @account_router.post('/delete')
-async def post_delete(request: Request, user: bool = Depends(process_bearer_token)):
-    return account_controller.delete_account(request)
+async def post_delete(request: Request, token: str | bool = Depends(process_bearer_token)):
+    return await account_controller.delete_account(request, token)

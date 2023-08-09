@@ -1,10 +1,10 @@
 import jwt
 from scripts.jwt_helper_functions import get_jwt_env_variables
-from fastapi import Request, HTTPException, Depends, Header
-from ttl_cache import token_cache
+from fastapi import HTTPException, Header, Request
+from scripts.ttl_cache import token_cache
 
 
-async def process_bearer_token(authorization: str = Header(...), request: Request = Depends()):
+async def process_bearer_token(request: Request, authorization: str = Header(...)):
     try:
         bearer_token = authorization.split(" ")[1] # extract token from bearer string
         return await validate_bearer_token(request, bearer_token)
@@ -12,7 +12,7 @@ async def process_bearer_token(authorization: str = Header(...), request: Reques
         HTTPException(status_code=401, detail="Invalid Bearer token")
 
 
-async def validate_bearer_token(request: Request, bearer_token):
+async def validate_bearer_token(request, bearer_token):
     if bearer_token in token_cache:
         return token_cache[bearer_token]
     
@@ -43,7 +43,7 @@ def decode_bearer_token(bearer_token):
         raise HTTPException(status_code=401, detail="Invalid Bearer token")
     
 
-async def verify_bearer_token(request: Request, decoded_token):
+async def verify_bearer_token(request, decoded_token):
     verify_token = await request.app.db['users'].find_one({
             "email": decoded_token.get("email")
         })
