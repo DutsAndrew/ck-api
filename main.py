@@ -1,4 +1,5 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from dotenv import dotenv_values
 from motor.motor_asyncio import AsyncIOMotorClient
 import certifi
@@ -16,7 +17,34 @@ from routes.pages_routes import pages_router
 from routes.tasks_routes import tasks_router
 from routes.teams_routes import teams_router
 
+# import custom middleware
+from scripts.custom_middleware import ErrorLoggingMiddleware
+
+# CORS origins
+CORS_ORIGINS = [
+    "http://localhost",
+    "http://localhost:3000/",
+    "http://127.0.0.1:8000/",
+]
+
 app = FastAPI()
+
+# middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.middleware("http")
+async def log_headers(request: Request, call_next):
+    print("Request Headers:", request.headers)
+    response = await call_next(request)
+    return response
+
+app.add_middleware(ErrorLoggingMiddleware)
 
 async def setup_db_client():
     # get .env files

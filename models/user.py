@@ -12,12 +12,12 @@ class User(BaseModel):
     email: EmailStr = Field(required=True)
     calendars: Optional[List[PyObjectId]] = Field(default_factory=list)
     chats: Optional[List[PyObjectId]] = Field(default_factory=list)
-    company: Optional[str] = Field(default_factory=None)
+    company: Optional[str] = Field(default_factory=str)
     first_name: str = Field(required=True)
-    joined: datetime = Field(default_factory=lambda: datetime.now)
-    job_title: Optional[str] = Field(default=None)
+    joined: datetime = Field(default_factory=datetime.now)
+    job_title: Optional[str] = Field(default=str)
     last_name: str = Field(required=True)
-    last_online: datetime = Field(default_factory=lambda: datetime.now)
+    last_online: datetime = Field(default_factory=datetime.now)
     notes: Optional[List[PyObjectId]] = Field(default_factory=list)
     password: str = Field(required=True)
     pending_chats: Optional[List[PyObjectId]] = Field(default_factory=list)
@@ -104,9 +104,6 @@ class User(BaseModel):
     @classmethod
     def validate_job_title(cls, v):
         if v is not None:
-            # job title was added validate it
-            if len(v) < 2:
-                raise ValidationError("Your job title entry must be at least 2 characters, FYI this field is not required and can be left blank")
 
             if len(v) > 50:
                 raise ValidationError("Your job title must be no more than 50 characters, FYI this field is not required and can be left blank")
@@ -120,9 +117,6 @@ class User(BaseModel):
     @classmethod
     def validate_company(cls, v):
         if v is not None:
-            # company added
-            if len(v) < 2:
-                raise ValidationError("Your company name entry must be at least 2 characters, FYI this field is not required and can be left blank")
 
             if len(v) > 50:
                 raise ValidationError("Your company name must be no more than 50 characters, FYI this field is not required and can be left blank")
@@ -136,7 +130,11 @@ class User(BaseModel):
     model_config = {
         "populate_by_name": True,
         "arbitrary_types_allowed": True,
-        "json_encoders": {ObjectId: str, PyObjectId: str},
+        "json_encoders": {
+            ObjectId: str,
+            PyObjectId: str,
+            datetime: lambda dt: dt.strftime('%Y-%m-%d %H:%M:%S')
+          },
         "json_schema_extra": {
             "example": {
                 "account_type": 'basic',

@@ -22,10 +22,7 @@ async def sign_up(request: Request, user: User):
             {"email": user.email}
         )
         if user_lookup is not None:
-            return {
-                "message": "That email is already registered with us, please login to your account or create one with a new email",
-                "user": user_data_stripped,
-            }      
+            raise HTTPException(status_code=400, detail='Email already registered')
         else:
             # no errors on form, email is not already registered and has been checked, continue sanitizing
 
@@ -50,21 +47,15 @@ async def sign_up(request: Request, user: User):
                         "user": user_data_stripped,
                     }
                 else:
-                    return {
-                        "message": "Failed to save user",
-                        "user": user_data_stripped,
-                    }  
+                    raise HTTPException(status_code=500, detail="Failed to save user")
             # failed to upload to db, abort, send form data back
             except Exception as e:
-                return {
-                    "message": "We failed to create your account, please resubmit your form",
-                    "user": user_data_stripped,
-                }
+                raise HTTPException(status_code=500, detail="Failed to upload user to DB")
             
     except Exception as e:
-        return {
-            "message": f"There was a server side issue processing this request, the error was: {e}"
-        }
+        raise HTTPException(status_code=500, detail=f"Server side issue: {e}")
+    
+    
     
 async def user_login(request: Request, user_login: UserLogin):
     try:
