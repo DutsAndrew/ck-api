@@ -223,7 +223,7 @@ def test_bad_login_does_not_authenticate_invalid_email(test_client_with_db: Test
         headers={'content-type': 'application/json'}
     )
 
-    assert response.json()['message'] == 'There was a server error processing your request'
+    assert response.json()['detail'] == 'There was a server error processing your request'
     assert response.json()['errors'] == {
         'status_code': 401,
         'detail': 'Invalid email or password',
@@ -246,7 +246,7 @@ def test_bad_login_does_not_authenticate_invalid_password(test_client_with_db: T
         headers={'content-type': 'application/json'}
     )
 
-    assert response.json()['message'] == 'There was a server error processing your request'
+    assert response.json()['detail'] == 'There was a server error processing your request'
     assert response.json()['errors'] == {
         'status_code': 401,
         'detail': 'Invalid email or password',

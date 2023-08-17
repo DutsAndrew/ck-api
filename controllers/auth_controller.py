@@ -15,18 +15,14 @@ async def sign_up(request: Request, user: User):
             return JSONResponse(content={'detail': 'Email already registered'}, status_code=400)
         else:
             # no errors on form, email is not already registered and has been checked, continue sanitizing
-
             # hash password
             password_in_bytes = user.password.encode("utf-8")
             salt = bcrypt.gensalt()
             hash = bcrypt.hashpw(password_in_bytes, salt)
-
             # overwrite user's password with the hashed version
             user.password = hash
-
             # convert user object into a dictionary
             user_data = jsonable_encoder(user)
-
             # begin uploading user to db
             upload_user = await request.app.db["users"].insert_one(user_data)
             if upload_user:
@@ -43,11 +39,9 @@ async def sign_up(request: Request, user: User):
                     "user": user_data_stripped,
                 }
             else:
-                return JSONResponse(content={'detail': 'Failed to save user'}, status_code=500)
-            
+                return JSONResponse(content={'detail': 'Failed to save user'}, status_code=500)   
     except Exception as e:
         return JSONResponse(content={'detail': f'Server side error, which was: {e}'}, status_code=500)
-    
     
     
 async def user_login(request: Request, user_login: UserLogin):
@@ -78,6 +72,6 @@ async def user_login(request: Request, user_login: UserLogin):
 
     except Exception as e:
         return {
-            "message": "There was a server error processing your request",
+            "detail": "There was a server error processing your request",
             "errors": e,
         }
