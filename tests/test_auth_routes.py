@@ -11,10 +11,10 @@ def test_no_api_signup(test_client: TestClient):
     response = test_client.post('/auth/signup')
     assert response.status_code == 422
 
+
 # @pytest.mark.skip(reason='Not implemented')
 def test_accurate_api_signup(test_client_with_db: TestClient):
     '''Test that a user can be created and saved to the database.'''
-
     # mock user data
     user_data = {
       'email': 'new@gmail.com',
@@ -43,10 +43,10 @@ def test_accurate_api_signup(test_client_with_db: TestClient):
         'company': 'Microsoft',
     }
 
+
 # @pytest.mark.skip(reason='Not implemented')
 def test_user_already_signed_up(test_client_with_db: TestClient):
     '''Test case for when a user has already been added'''
-
     # mock user data
     user_data = {
       'email': 'new@gmail.com',
@@ -64,21 +64,13 @@ def test_user_already_signed_up(test_client_with_db: TestClient):
         headers={'content-type': 'application/json'}
     )
 
-    assert response.status_code == 200
-    assert response.json()['message'] == 'That email is already registered with us, please login to your account or create one with a new email'
-    assert response.json()['user'] == {
-        'email': 'new@gmail.com',
-        'company': 'Microsoft',
-        'first_name': 'Bob',
-        'job_title': 'Software Developer',
-        'last_name': 'Gregory',
-    }
+    assert response.status_code == 400
+    assert response.json()['detail'] == 'Email already registered'
 
 
 # @pytest.mark.skip(reason='Not implemented')
 def test_sign_up_fails_on_no_data_entry(test_client_with_db: TestClient):
     '''Test case for when an account is being created but it's empty'''
-
     user_data = {
         
     }
@@ -97,12 +89,11 @@ def test_sign_up_fails_on_no_data_entry(test_client_with_db: TestClient):
 
     # there should be 5 missing value errors
     errors = response.json()['detail']
-    assert len(errors) == 5
+    assert len(errors) == 4
 
     # Define the expected error types and corresponding field names
     expected_errors = [
         {'type': 'missing', 'field': 'email'},
-        {'type': 'missing', 'field': 'company'},
         {'type': 'missing', 'field': 'first_name'},
         {'type': 'missing', 'field': 'last_name'},
         {'type': 'missing', 'field': 'password'},
@@ -138,8 +129,8 @@ def test_login_gives_good_auth_message_on_valid_login(test_client_with_db: TestC
     assert response.json()['message'] == 'You have been successfully logged in'
 
 
-@pytest.mark.skip(reason='Not implemented')
-def test_login_sends_good_bearer_token_on_valid_login(test_client_with_db: TestClient, monkeypatch):
+# @pytest.mark.skip(reason='Not implemented')
+def test_login_sends_good_bearer_token_on_valid_login(test_client_with_db: TestClient):
     '''Test case for checking good refresh token is sent'''
     # mock user data
     user_data = {
@@ -174,7 +165,7 @@ def test_login_sends_good_bearer_token_on_valid_login(test_client_with_db: TestC
         raise HTTPException(status_code=401, detail='The refresh token is invalid')
     
 
-@pytest.mark.skip(reason='Not implemented')
+# @pytest.mark.skip(reason='Not implemented')
 def test_login_sends_good_refresh_token_as_cookie_on_valid_login(test_client_with_db: TestClient):
     '''Test case to make sure good refresh token is sent'''
     # mock user data
@@ -201,7 +192,7 @@ def test_login_sends_good_refresh_token_as_cookie_on_valid_login(test_client_wit
         jwt_config['JWT_SECRET'],
         algorithms=jwt_config['JWT_ALGORITHM']
     )
-    refresh_token_exp = datetime.fromtimestamp(decoded_token.get('exp'), tz=timezone.utc) # should be 30 mins
+    refresh_token_exp = datetime.fromtimestamp(decoded_token.get('exp'), tz=timezone.utc) # 
     approximate_exp_time = (datetime.utcnow() + timedelta(days=6)).replace(tzinfo=timezone.utc)
     assert refresh_token_exp > approximate_exp_time
 

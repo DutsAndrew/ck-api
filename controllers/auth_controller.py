@@ -6,23 +6,13 @@ from scripts.jwt_token_encoders import encode_bearer_token, encode_refresh_token
 import bcrypt
 
 async def sign_up(request: Request, user: User):
-    
-    # create user instance without sensitive data to send back to user
-    user_data_stripped = {
-        "email": user.email,
-        "first_name": user.first_name,
-        "last_name": user.last_name,
-        "job_title": user.job_title if hasattr(user, 'job_title') else None,
-        "company": user.company if hasattr(user, 'company') else None,
-    }
-
     # check if email has already been registered
     try:
         user_lookup = await request.app.db['users'].find_one(
             {"email": user.email}
         )
         if user_lookup is not None:
-            raise HTTPException(status_code=400, detail='Email already registered')
+            return JSONResponse(content={'detail': 'Email already registered'}, status_code=400)
         else:
             # no errors on form, email is not already registered and has been checked, continue sanitizing
 
@@ -38,22 +28,25 @@ async def sign_up(request: Request, user: User):
             user_data = jsonable_encoder(user)
 
             # begin uploading user to db
-            try: 
-                upload_user = await request.app.db["users"].insert_one(user_data)
-                if upload_user:
-                    return {
-                        "message": "Success, we created your account",
-                        "success": True,
-                        "user": user_data_stripped,
-                    }
-                else:
-                    raise HTTPException(status_code=500, detail="Failed to save user")
-            # failed to upload to db, abort, send form data back
-            except Exception as e:
-                raise HTTPException(status_code=500, detail="Failed to upload user to DB")
+            upload_user = await request.app.db["users"].insert_one(user_data)
+            if upload_user:
+                user_data_stripped = {
+                    "email": user.email,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name,
+                    "job_title": user.job_title if hasattr(user, 'job_title') else None,
+                    "company": user.company if hasattr(user, 'company') else None,
+                }
+                return {
+                    "message": "Success, we created your account",
+                    "success": True,
+                    "user": user_data_stripped,
+                }
+            else:
+                return JSONResponse(content={'detail': 'Failed to save user'}, status_code=500)
             
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Server side issue: {e}")
+        return JSONResponse(content={'detail': f'Server side error, which was: {e}'}, status_code=500)
     
     
     
