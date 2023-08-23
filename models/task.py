@@ -22,6 +22,7 @@ class Task(BaseModel):
     completed: bool = Field(False)
     completion_rate: int = Field(0)
     created_on: datetime = Field(default_factory=lambda: datetime.now)
+    project: PyObjectId = Field(alias="_id")
     sub_tasks: Optional[List[PyObjectId]] = Field(None)
     team: Optional[PyObjectId] = Field(None)
 
@@ -37,6 +38,7 @@ class Task(BaseModel):
               "completed": False,
               "completion_rate": 0,
               "created_on": "2023-07-27 13:27:25.303335",
+              "project": str(ObjectId()),
               "sub_tasks": [str(ObjectId()), str(ObjectId())],
               "team": str(ObjectId()),
             }
