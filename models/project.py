@@ -18,8 +18,8 @@ class Project(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     completed: bool = Field(default_factory=False)
     completed_tasks: Optional[List[PyObjectId]] = Field(default_factory=list)
-    deadline: datetime = Field(default_factory=lambda: datetime.now() + timedelta(weeks=4))
-    name: str = Field(default_factory=str)
+    deadline: datetime = Field(required=True)
+    name: str = Field(required=True)
     uncompleted_tasks: Optional[List[PyObjectId]] = Field(default_factory=list)
 
     @property
