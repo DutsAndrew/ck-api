@@ -54,7 +54,7 @@ class User(BaseModel):
             raise ValidationError("first name must be no more than 1000 characters")
         
         if not re.match(r'^[A-Za-z \-\'\.]+$', v):
-            raise ValidationError(" first name has too many non-alpha characters")
+            raise ValidationError("first name has non-alpha characters")
             
         return v
     

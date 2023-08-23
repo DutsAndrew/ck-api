@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from typing import Optional, List
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, ValidationError
 from models.bson_object_id import PyObjectId
 from bson import ObjectId
 
@@ -29,6 +29,23 @@ class Project(BaseModel):
     @property
     def deadline_approaching(self):
         return (self.deadline - datetime.now()) < timedelta(days=7)
+    
+    @field_validator('name')
+    @classmethod
+    def validate_project_name(cls, v):
+        if not v:
+            raise ValidationError('Your project must have a name')
+        if len(v) < 1:
+            raise ValidationError('You did not add a project name')
+        if len(v) > 1000:
+            raise ValidationError('Your project name is longer than 1000 characters')
+        return v
+    
+    @field_validator('deadline')
+    @classmethod
+    def validate_deadline(cls, v):
+        if v < datetime.now() + timedelta(minutes=30):
+            raise ValidationError('Your deadline submission must be at least 30 minutes')
 
     model_config = {
         "populate_by_name": True,
