@@ -12,10 +12,12 @@ class User(BaseModel):
     email: EmailStr = Field(required=True)
     calendars: Optional[List[PyObjectId]] = Field(default_factory=list)
     chats: Optional[List[PyObjectId]] = Field(default_factory=list)
+    classes: Optional[List[PyObjectId]] = Field(default_factory=list)
     company: Optional[str] = Field(default_factory=str)
     first_name: str = Field(required=True)
     joined: datetime = Field(default_factory=datetime.now)
     job_title: Optional[str] = Field(default=str)
+    last_contributed: datetime = Field(default_factory=datetime.now)
     last_name: str = Field(required=True)
     last_online: datetime = Field(default_factory=datetime.now)
     notes: Optional[List[PyObjectId]] = Field(default_factory=list)
@@ -25,8 +27,14 @@ class User(BaseModel):
     pending_teams: Optional[List[PyObjectId]] = Field(default_factory=list)
     tasks: Optional[List[PyObjectId]] = Field(default_factory=list)
     teams: Optional[List[PyObjectId]] = Field(default_factory=list)
+    total_completed_projects: int = Field(default_factory=0, required=False)
+    total_completed_tasks: int = Field(default_factory=0, required=False)
+    total_completed_subtasks: int = Field(default_factory=0, required=False)
     user_color_preferences: UserColorPreferences = Field(default_factory=lambda: UserColorPreferences())
     verified_email: bool = Field(default=False)
+    yearly_completed_projects: int = Field(default_factory=0, required=False)
+    yearly_completed_tasks: int = Field(default_factory=0, required=False)
+    yearly_completed_subtasks: int = Field(default_factory=0, required=False)
 
     @field_validator('email')
     @classmethod
@@ -141,10 +149,12 @@ class User(BaseModel):
                 "email": "george123@yahoo.com",
                 "calendars": [str(ObjectId()), str(ObjectId())],
                 "chats": [str(ObjectId()), str(ObjectId())],
+                "classes": [str(ObjectId()), str(ObjectId())],
                 "company": None,
                 "first_name": "Kathy",
                 "joined": "2023-07-27 13:27:25.303335",
                 "job_title": None,
+                "last_contributed": "2023-07-27 13:27:25.303335",
                 "last_name": "Bean",
                 "last_online": "2023-07-27 13:27:25.303335",
                 "notes": [str(ObjectId()), str(ObjectId()), str(ObjectId()), str(ObjectId()), str(ObjectId())],
@@ -154,6 +164,9 @@ class User(BaseModel):
                 "pending_teams": [],
                 "tasks": [str(ObjectId()), str(ObjectId())],
                 "teams": [str(ObjectId())],
+                "total_completed_projects": 0,
+                "total_completed_tasks": 0,
+                "total_completed_subtasks": 0,
                 "user_color_preferences": {
                     "calendars": [
                         {
@@ -207,7 +220,11 @@ class User(BaseModel):
                         "font_color": "#000000",
                         "background_color": "#FFFFFF"
                     },
-                }
+                },
+                "verified_email": False,
+                "yearly_completed_projects": 0,
+                "yearly_completed_tasks": 0,
+                "yearly_completed_subtasks": 0,
             }
         }
     }
