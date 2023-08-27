@@ -15,8 +15,8 @@ from datetime import datetime
 
 class StudentNote(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
-    assigned_class: PyObjectId = Field(default_factory=PyObjectId, alias="class_id")
-    assigned_teacher: PyObjectId = Field(default_factory=PyObjectId, alias="teacher_id")
+    assigned_class: PyObjectId = Field(default_factory=PyObjectId, alias="class_id", required=True)
+    assigned_teacher: PyObjectId = Field(default_factory=PyObjectId, alias="teacher_id", required=True)
     learning_profile: Optional[List[str]] = Field(default_factory=list)
     student_name: str = Field(required=True)
     teacher_notes: Optional[List[str]] = Field(default_factory=list)

@@ -56,20 +56,9 @@ async def user_login(request: Request, user_login: UserLogin):
         ):
             raise HTTPException(status_code=401, detail="Invalid email or password")
         
-        user_response = {
-            "_id": str(user_lookup["_id"]),
-            "account_type": user_lookup["account_type"],
-            "email": user_lookup["email"],
-            "calendars": user_lookup["calendars"],
-            "chats": user_lookup["chats"],
-            "company": user_lookup["company"],
-            "first_name": user_lookup["first_name"],
-            "last_name": user_lookup["last_name"],
-            "notes": user_lookup["notes"],
-            "tasks": user_lookup["tasks"],
-            "teams": user_lookup["teams"],
-            "user_color_preferences": user_lookup["user_color_preferences"],
-        }
+        # prepare user instance to send back
+        user_response = user_lookup.copy()
+        del user_response['password']
         
         bearer_token = encode_bearer_token(user_login)
         refresh_token = encode_refresh_token(user_lookup['_id'])
