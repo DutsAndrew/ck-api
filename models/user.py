@@ -27,6 +27,8 @@ class User(BaseModel):
     last_name: str = Field(required=True)
     last_online: datetime = Field(default_factory=datetime.now)
     notes: List[PyObjectId] = Field(default_factory=list)
+    notifications_read: List = Field(default_factory=list)
+    notifications_unread: List = Field(default_factory=list)
     password: str = Field(required=True)
     personal_calendar: Calendar = Field(default_factory=lambda: Calendar(calendar_type="personal"))
     pending_chats: List[PyObjectId] = Field(default_factory=list)

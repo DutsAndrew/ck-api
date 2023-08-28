@@ -11,8 +11,6 @@ import holidays
 # what year the calendar is for
 # color scheme set by user
 
-# CALENDARS MUST BE ACCOMPANIED BY A USER OR TEAM _ID BUT NOT BOTH
-
 class Calendar(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     calendar_days: dict = Field(default_factory=dict)
