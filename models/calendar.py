@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import List, Optional
 from pydantic import BaseModel, Field
 from models.bson_object_id import PyObjectId
 from bson import ObjectId
@@ -16,18 +15,20 @@ import holidays
 
 class Calendar(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
-    accompanied_team: Optional[PyObjectId] = Field(default_factory=None, alias="team_id")
-    accompanied_user: Optional[PyObjectId] = Field(default_factory=None, alias="user_id")
-    events: Optional[List[PyObjectId]] = Field(default_factory=list)
-    type: str = Field(default_factory=str)
-    year: int = Field(default_factory=lambda: datetime.now.year, required=True)
+    calendar_days: dict = Field(default_factory=dict)
+    calendar_holidays: list = Field(default_factory=list)
+    calendar_type: str = Field(default_factory=str)
+    events: list = Field(default_factory=list)
+    year: int = Field(default_factory=lambda: datetime.now().year, required=True)
 
     def __init__(self, calendar_type, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.calendar_type = calendar_type
+
         if calendar_type == "personal":
             self.calendar_days = self.get_number_of_days_in_month()
-            self.holidays = self.get_us_holidays()
+            self.calendar_holidays = self.get_us_holidays()
         else:
             self.calendar_days = self.get_number_of_days_in_month()
 

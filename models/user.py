@@ -42,10 +42,9 @@ class User(BaseModel):
     yearly_completed_tasks: int = Field(default_factory=int)
     yearly_completed_subtasks: int = Field(default_factory=int)
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.personal_calendar = Calendar(calendar_type="personal")
+    # def __init__(self, *args, **kwargs):
+    #     super().__init__(*args, **kwargs)
+    #     self.personal_calendar = Calendar(calendar_type="personal")
 
     @field_validator('email')
     @classmethod
