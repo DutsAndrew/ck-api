@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Optional, List
 from pydantic import BaseModel, Field, EmailStr, field_validator, ValidationError
 from models.color_scheme import UserColorPreferences
+from models.calendar import Calendar
 from models.bson_object_id import PyObjectId
 from bson import ObjectId
 import re
@@ -40,6 +41,11 @@ class User(BaseModel):
     yearly_completed_projects: int = Field(default_factory=int)
     yearly_completed_tasks: int = Field(default_factory=int)
     yearly_completed_subtasks: int = Field(default_factory=int)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.personal_calendar = Calendar(calendar_type="personal")
 
     @field_validator('email')
     @classmethod

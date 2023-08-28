@@ -1,5 +1,4 @@
 from models.user import User, UserLogin
-from models.calendar import Calendar
 from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
@@ -23,10 +22,6 @@ async def sign_up(request: Request, user: User):
 
             # store hashed password
             user.password = hash
-
-            # create personal Calendar instance save it in user's calendars
-            personal_calendar = Calendar(calendar_type="personal")
-            user.calendars.append(personal_calendar)
 
             # convert user object into a dictionary
             user_data = jsonable_encoder(user)
