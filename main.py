@@ -41,14 +41,14 @@ app.add_middleware(
 
 
 # debugging middleware for logging headers, comment out for prod env.
-@app.middleware("http")
-async def log_headers(request: Request, call_next):
-    print("Request Headers:", request.headers)
-    response = await call_next(request)
-    print("Response Headers:", response.headers)
-    return response
+# @app.middleware("http")
+# async def log_headers(request: Request, call_next):
+#     print("Request Headers:", request.headers)
+#     response = await call_next(request)
+#     print("Response Headers:", response.headers)
+#     return response
 
-app.add_middleware(ErrorLoggingMiddleware)
+# app.add_middleware(ErrorLoggingMiddleware)
 
 async def setup_db_client():
     # get .env files

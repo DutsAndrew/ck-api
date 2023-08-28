@@ -65,6 +65,7 @@ pyjwt = "*"
 cachetools = "*"
 hypothesis = "*"
 hypothesmith = "*"
+holidays = "*"
 
 [dev-packages]
 

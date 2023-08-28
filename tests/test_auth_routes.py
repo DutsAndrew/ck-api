@@ -64,6 +64,8 @@ def test_user_already_signed_up(test_client_with_db: TestClient):
         headers={'content-type': 'application/json'}
     )
 
+    print(response.json())
+
     assert response.status_code == 400
     assert response.json()['detail'] == 'Email already registered'
 

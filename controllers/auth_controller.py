@@ -1,4 +1,5 @@
 from models.user import User, UserLogin
+from models.calendar import Calendar
 from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
@@ -19,11 +20,17 @@ async def sign_up(request: Request, user: User):
             password_in_bytes = user.password.encode("utf-8")
             salt = bcrypt.gensalt()
             hash = bcrypt.hashpw(password_in_bytes, salt)
-            # overwrite user's password with the hashed version
+
+            # store hashed password
             user.password = hash
+
+            # create personal Calendar instance save it in user's calendars
+            personal_calendar = Calendar(calendar_type="personal")
+            user.calendars.append(personal_calendar)
+
             # convert user object into a dictionary
             user_data = jsonable_encoder(user)
-            # begin uploading user to db
+
             upload_user = await request.app.db["users"].insert_one(user_data)
             if upload_user:
                 user_data_stripped = {
