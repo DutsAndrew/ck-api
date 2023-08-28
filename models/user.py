@@ -16,7 +16,7 @@ class User(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     account_type: str = Field(default='basic')
     email: EmailStr = Field(required=True)
-    calendars: Optional[List[PyObjectId]] = Field(default_factory=list)
+    calendars: List[PyObjectId] = Field(default_factory=list)
     chats: List[PyObjectId] = Field(default_factory=list)
     classes: List[PyObjectId] = Field(default_factory=list)
     company: str = Field(default_factory=str)
@@ -28,6 +28,7 @@ class User(BaseModel):
     last_online: datetime = Field(default_factory=datetime.now)
     notes: List[PyObjectId] = Field(default_factory=list)
     password: str = Field(required=True)
+    personal_calendar: Calendar = Field(default_factory=lambda: Calendar(calendar_type="personal"))
     pending_chats: List[PyObjectId] = Field(default_factory=list)
     pending_tasks: List[PyObjectId] = Field(default_factory=list)
     pending_teams: List[PyObjectId] = Field(default_factory=list)
@@ -41,10 +42,6 @@ class User(BaseModel):
     yearly_completed_projects: int = Field(default_factory=int)
     yearly_completed_tasks: int = Field(default_factory=int)
     yearly_completed_subtasks: int = Field(default_factory=int)
-
-    # def __init__(self, *args, **kwargs):
-    #     super().__init__(*args, **kwargs)
-    #     self.personal_calendar = Calendar(calendar_type="personal")
 
     @field_validator('email')
     @classmethod
