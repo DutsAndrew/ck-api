@@ -13,40 +13,57 @@ import holidays
 
 class Calendar(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
-    calendar_days: dict = Field(default_factory=dict)
+    calendar_years_and_dates: dict = Field(default_factory=dict)
     calendar_holidays: list = Field(default_factory=list)
     calendar_type: str = Field(default_factory=str)
     events: list = Field(default_factory=list)
     year: int = Field(default_factory=lambda: datetime.now().year, required=True)
 
+
     def __init__(self, calendar_type, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.calendar_type = calendar_type
+        current_year = datetime.now().year
 
         if calendar_type == "personal":
-            self.calendar_days = self.get_number_of_days_in_month()
+            self.calendar_years_and_dates = self.generate_two_year_calendar(current_year)
             self.calendar_holidays = self.get_us_holidays()
         else:
-            self.calendar_days = self.get_number_of_days_in_month()
+            self.calendar_years_and_dates = self.generate_two_year_calendar(current_year)
 
-    def get_number_of_days_in_month(self):
-        year = datetime.now().year
+
+    def generate_two_year_calendar(self, start_year):
+        next_year = start_year + 1
         full_calendar = {}
 
-        for month in range(1, 13):
-            _, last_day = calendar.monthrange(year, month)
-            month_name = calendar.month_name[month]
-            first_weekday = calendar.weekday(year, month, 1)
-
-            month_info = {
-                'days': last_day,
-                'month_starts_on': calendar.day_name[first_weekday] 
-            }
-
-            full_calendar[month_name] = month_info
-
+        for year in [start_year, next_year]:
+            year_calendar = {}
+            
+            for month in range(1, 13):
+                _, last_day = calendar.monthrange(year, month)
+                month_name = calendar.month_name[month]
+                first_weekday = calendar.weekday(year, month, 1)
+                
+                month_info = {
+                    'days': last_day,
+                    'month_starts_on': calendar.day_name[first_weekday] 
+                }
+                
+                year_calendar[month_name] = month_info
+            
+            full_calendar[year] = year_calendar
+        
         return full_calendar
+    
+
+    def add_next_two_years_to_calendar(self, personal_calendar):
+        years_list = list(personal_calendar.keys())
+        last_year_in_list = years_list[-1:]
+        next_year = last_year_in_list[0] + 1
+        following_two_years = self.generate_two_year_calendar(next_year)
+        personal_calendar.update(following_two_years)
+
     
     def get_us_holidays(self):
         holidays_list = []
