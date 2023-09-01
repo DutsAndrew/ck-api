@@ -17,7 +17,6 @@ class Calendar(BaseModel):
     calendar_holidays: list = Field(default_factory=list)
     calendar_type: str = Field(default_factory=str)
     events: list = Field(default_factory=list)
-    year: int = Field(default_factory=lambda: datetime.now().year, required=True)
 
 
     def __init__(self, calendar_type, *args, **kwargs):
