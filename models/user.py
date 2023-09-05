@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel, Field, EmailStr, field_validator, ValidationError
+from pydantic import BaseModel, Field, EmailStr, field_validator, model_validator, ValidationError
 from models.color_scheme import UserColorPreferences
 from models.calendar import Calendar
 from models.bson_object_id import PyObjectId
@@ -30,10 +30,10 @@ class User(BaseModel):
     notifications_read: List = Field(default_factory=list)
     notifications_unread: List = Field(default_factory=list)
     password: str = Field(required=True)
-    personal_calendar: Calendar = Field(default_factory=lambda: Calendar(calendar_type="personal"))
     pending_chats: List[PyObjectId] = Field(default_factory=list)
     pending_tasks: List[PyObjectId] = Field(default_factory=list)
     pending_teams: List[PyObjectId] = Field(default_factory=list)
+    personal_calendar: object = Field(default_factory=object)
     tasks: List[PyObjectId] = Field(default_factory=list)
     teams: List[PyObjectId] = Field(default_factory=list)
     total_completed_projects: int = Field(default_factory=int)
@@ -44,6 +44,10 @@ class User(BaseModel):
     yearly_completed_projects: int = Field(default_factory=int)
     yearly_completed_tasks: int = Field(default_factory=int)
     yearly_completed_subtasks: int = Field(default_factory=int)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.personal_calendar = Calendar(calendar_type="personal", name=f"{self.first_name}'s Personal Calendar")
 
     @field_validator('email')
     @classmethod

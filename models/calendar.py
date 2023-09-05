@@ -17,12 +17,14 @@ class Calendar(BaseModel):
     calendar_holidays: list = Field(default_factory=list)
     calendar_type: str = Field(default_factory=str)
     events: list = Field(default_factory=list)
+    name: str = Field(default=str)
 
 
-    def __init__(self, calendar_type, *args, **kwargs):
+    def __init__(self, calendar_type, name, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.calendar_type = calendar_type
+        self.name = name
         current_year = datetime.now().year
 
         if calendar_type == "personal":
