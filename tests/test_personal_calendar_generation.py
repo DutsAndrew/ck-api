@@ -4,7 +4,7 @@ from datetime import datetime
 
 # @pytest.mark.skip(reason='Not implemented')
 def test_personal_calendar_gets_created():
-    new_calendar = Calendar(calendar_type="personal", name="Bob")
+    new_calendar = Calendar(calendar_type="personal", name="Bob", UserId='123')
 
     current_year = datetime.now().year
     next_year = current_year + 1

@@ -1,5 +1,6 @@
 from datetime import datetime
 from pydantic import BaseModel, Field
+from typing import List
 from models.bson_object_id import PyObjectId
 from bson import ObjectId
 import calendar
@@ -13,28 +14,35 @@ import holidays
 
 class Calendar(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    authorized_users: List[PyObjectId] = Field(default_factory=list)
     calendar_years_and_dates: dict = Field(default_factory=dict)
     calendar_holidays: list = Field(default_factory=list)
     calendar_type: str = Field(default_factory=str)
+    created_by: PyObjectId = Field(default_factory=PyObjectId)
+    created_on: datetime = Field(default_factory=datetime.now)
     events: list = Field(default_factory=list)
-    name: str = Field(default=str)
+    name: str = Field(default_factory=str)
+    pending_users: list = Field(default_factory=list)
+    view_only_users: list = Field(default_factory=list)
 
 
-    def __init__(self, calendar_type, name, *args, **kwargs):
+    def __init__(self, calendar_type, name, userId: PyObjectId, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.authorized_users = [userId]
         self.calendar_type = calendar_type
+        self.created_by = userId
         self.name = name
-        current_year = datetime.now().year
 
         if calendar_type == "personal":
-            self.calendar_years_and_dates = self.generate_two_year_calendar(current_year)
+            self.calendar_years_and_dates = self.generate_two_year_calendar()
             self.calendar_holidays = self.get_us_holidays()
         else:
-            self.calendar_years_and_dates = self.generate_two_year_calendar(current_year)
+            self.calendar_years_and_dates = self.generate_two_year_calendar()
 
 
-    def generate_two_year_calendar(self, start_year):
+    def generate_two_year_calendar(self):
+        start_year = datetime.now().year
         next_year = start_year + 1
         full_calendar = {}
 
@@ -83,7 +91,11 @@ class Calendar(BaseModel):
     model_config = {
         "populate_by_name": True,
         "arbitrary_types_allowed": True,
-        "json_encoders": {ObjectId: str, PyObjectId: str},
+        "json_encoders": {
+            ObjectId: str,
+            PyObjectId: str,
+            datetime: lambda dt: dt.strftime('%Y-%m-%d %H:%M:%S')
+          },
         "json_schema_extra": {
             "example": {
                 "accompanied_team": None,

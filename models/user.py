@@ -47,7 +47,7 @@ class User(BaseModel):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.personal_calendar = Calendar(calendar_type="personal", name=f"{self.first_name}'s Personal Calendar")
+        self.personal_calendar = Calendar(calendar_type="personal", name=f"{self.first_name}'s Personal Calendar", userId=self.id)
 
     @field_validator('email')
     @classmethod
