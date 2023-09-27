@@ -18,7 +18,7 @@ class Event(BaseModel):
     event_date_and_time: datetime = Field(default_factory=datetime.now, required=True)
     event_description: str = Field(default_factory=str)
     event_name: str = Field(default_factory=str, required=True)
-    patterns: Optional[str] = Field(None)
+    pattern: str = Field(default_factory=str)
     repeats: bool = Field(default_factory=False)
 
 
@@ -30,7 +30,7 @@ class Event(BaseModel):
             "example": {
                 "calendar": str(ObjectId()),
                 "created_by": str(ObjectId()),
-                "patterns": None,
+                "pattern": "",
             }
         }
     }
