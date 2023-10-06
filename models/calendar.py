@@ -34,59 +34,6 @@ class Calendar(BaseModel):
         self.created_by = userId
         self.name = name
 
-        if calendar_type == "personal":
-            self.calendar_years_and_dates = self.generate_two_year_calendar()
-            self.calendar_holidays = self.get_us_holidays()
-        else:
-            self.calendar_years_and_dates = self.generate_two_year_calendar()
-
-
-    def generate_two_year_calendar(self):
-        start_year = datetime.now().year
-        next_year = start_year + 1
-        full_calendar = {}
-
-        for year in [start_year, next_year]:
-            year_calendar = {}
-            
-            for month in range(1, 13):
-                _, last_day = calendar.monthrange(year, month)
-                month_name = calendar.month_name[month]
-                first_weekday = calendar.weekday(year, month, 1)
-                
-                month_info = {
-                    'days': last_day,
-                    'month_starts_on': calendar.day_name[first_weekday] 
-                }
-                
-                year_calendar[month_name] = month_info
-            
-            full_calendar[year] = year_calendar
-        
-        return full_calendar
-    
-
-    def add_next_two_years_to_calendar(self, personal_calendar):
-        years_list = list(personal_calendar.keys())
-        last_year_in_list = years_list[-1:]
-        next_year = last_year_in_list[0] + 1
-        following_two_years = self.generate_two_year_calendar(next_year)
-        personal_calendar.update(following_two_years)
-
-    
-    def get_us_holidays(self):
-        holidays_list = []
-        us_holidays = holidays.US(years=datetime.now().year)
-
-        for date, name in sorted(us_holidays.items()):
-            holiday_info = {
-                'date': date,
-                'name': name,
-                'type': 'holiday',
-            }
-            holidays_list.append(holiday_info)
-
-        return holidays_list
 
     model_config = {
         "populate_by_name": True,
