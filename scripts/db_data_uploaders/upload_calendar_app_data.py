@@ -109,18 +109,21 @@ class UploadCalendarData:
 
             if data_upload is not None:
                 logger.info("Data uploaded successfully")
+                self.shutdown_db_client()
                 return {
                     "detail": "Data uploaded",
                     "data": data_upload,
                 }
             else:
                 logger.error("There was an error processing the upload")
+                self.shutdown_db_client()
                 return {
                     "detail": "There may have been an error with the insertion request",
                 }
             
         except Exception as e:
             logger.exception("There was a server error uploading data")
+            self.shutdown_db_client()
             return {
                 "detail": "There was an error uploading the data to MongoDB",
                 "errors": str(e),
