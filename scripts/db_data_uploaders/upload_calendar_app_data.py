@@ -1,13 +1,31 @@
+from pydantic import BaseModel, Field
+from typing import List
 from fastapi import FastAPI
 from dotenv import dotenv_values
 from motor.motor_asyncio import AsyncIOMotorClient
 from datetime import datetime
-from bson import json_util
 import calendar
 import holidays
 import logging
 import asyncio
 import certifi
+
+class CalendarData(BaseModel):
+    app_data_type: str = Field(default_factory=str)
+    calendar_dates: dict = Field(default_factory=dict)
+    holiday_dates: List[object] = Field(default_factory=list)
+
+    def __init__(self, app_data_type, calendar_data, holiday_data):
+        super().__init__()
+        self.app_data_type = app_data_type
+        self.calendar_dates = calendar_data
+        self.holiday_dates = holiday_data
+
+    model_config = {
+        "populate_by_name": True,
+        "arbitrary_types_allowed": True,
+    }
+    
 
 class UploadCalendarData:
   
@@ -34,7 +52,7 @@ class UploadCalendarData:
     def generate_calendar_data(self):
         full_calendar = {}
 
-        for year in [self.start_year, self.end_year]:
+        for year in range(self.start_year, self.end_year + 1):
             year_calendar = {}
             
             for month in range(1, 13):
@@ -51,7 +69,7 @@ class UploadCalendarData:
             
             full_calendar[str(year)] = year_calendar
         
-        return json_util.dumps(full_calendar) # convert to JSON string
+        return full_calendar
     
     def generate_calendar_holidays(self):
         full_holiday_calendar = {}
@@ -71,7 +89,7 @@ class UploadCalendarData:
 
             full_holiday_calendar[str(year)] = holiday_calendar
 
-        return json_util.dumps(full_holiday_calendar) # convert to JSON string
+        return full_holiday_calendar
 
     async def store_calendar_data(self):
         
@@ -79,13 +97,15 @@ class UploadCalendarData:
         logging.basicConfig(level=logging.INFO)
         logger = logging.getLogger(__name__)
 
-        calendar_data = {
-            "dates_info": self.generate_calendar_data(),
-            "holidays_info": self.generate_calendar_holidays(),
-        }
+        calendar_data = CalendarData(
+            'calendar',
+            self.generate_calendar_data(),
+            self.generate_calendar_holidays()
+        )
         
         try:
-            data_upload = await self.app.db['calendar-data'].insert_one(calendar_data)
+            converted_data = calendar_data.model_dump() # convert data to dict for storing
+            data_upload = await self.app.db['app-data'].insert_one(converted_data)
 
             if data_upload is not None:
                 logger.info("Data uploaded successfully")
