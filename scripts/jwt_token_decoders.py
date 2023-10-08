@@ -7,7 +7,7 @@ from scripts.ttl_cache import token_cache
 async def process_bearer_token(request: Request, authorization: str = Header(...)):
     try:
         bearer_token = authorization.split(" ")[1] # extract token from bearer string
-        return await validate_bearer_token(request, bearer_token)
+        return await validate_bearer_token(request, bearer_token) # request is just being passed to access db ref for token validation
     except IndexError:
         HTTPException(status_code=401, detail="Invalid Bearer token")
 
@@ -16,7 +16,7 @@ async def validate_bearer_token(request, bearer_token):
     if bearer_token in token_cache:
         return token_cache[bearer_token]
     
-    decoded_token = await decode_bearer_token(bearer_token)
+    decoded_token = decode_bearer_token(bearer_token)
     verified_token = await verify_bearer_token(request, decoded_token)
 
     if not verified_token:
