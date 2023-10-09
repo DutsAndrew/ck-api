@@ -31,8 +31,8 @@ class UploadCalendarData:
   
     def __init__(self):
         self.app = FastAPI()
-        self.start_year = datetime.now().year - 5
-        self.end_year = datetime.now().year + 5
+        self.start_year = datetime.now().year - 1
+        self.end_year = datetime.now().year + 1
 
     async def upload_calendar_data(self):
         await self.setup_db_client()
@@ -41,7 +41,7 @@ class UploadCalendarData:
 
     async def setup_db_client(self):
         # get .env files
-        config = dotenv_values("../.env")
+        config = dotenv_values("../../.env")
         self.app.mongodb_client = AsyncIOMotorClient(config["DEV_MONGO_URI"], tlsCAFile=certifi.where())
         self.app.db = self.app.mongodb_client[config["DEV_DB_NAME"]]
         return self.app
@@ -105,25 +105,37 @@ class UploadCalendarData:
         
         try:
             converted_data = calendar_data.model_dump() # convert data to dict for storing
-            data_upload = await self.app.db['app-data'].insert_one(converted_data)
+            check_for_old_data = await self.app.db['app-data'].find_one(
+                {"app_data_type": 'calendar'}
+            )
+
+            print(check_for_old_data)
+
+            if check_for_old_data is not None:
+                data_upload = await self.app.db['app-data'].update_one(
+                    {"app_data_type": 'calendar'},
+                    {"$set": converted_data},
+                )
+            else:
+                data_upload = await self.app.db['app-data'].insert_one(converted_data)
 
             if data_upload is not None:
                 logger.info("Data uploaded successfully")
-                self.shutdown_db_client()
+                await self.shutdown_db_client()
                 return {
                     "detail": "Data uploaded",
                     "data": data_upload,
                 }
             else:
                 logger.error("There was an error processing the upload")
-                self.shutdown_db_client()
+                await self.shutdown_db_client()
                 return {
                     "detail": "There may have been an error with the insertion request",
                 }
             
         except Exception as e:
             logger.exception("There was a server error uploading data")
-            self.shutdown_db_client()
+            await self.shutdown_db_client()
             return {
                 "detail": "There was an error uploading the data to MongoDB",
                 "errors": str(e),
