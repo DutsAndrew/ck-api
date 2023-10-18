@@ -68,7 +68,7 @@ async def fetch_users_query(request: Request):
                 return JSONResponse(
                     content={
                         'detail': 'Results found',
-                        'user_Results': user_search_results,
+                        'user_results': user_search_results,
                     },
                     status_code=200
                 )
