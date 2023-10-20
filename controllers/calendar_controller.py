@@ -1,6 +1,6 @@
 from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
-from models.user import User
+from models.calendar import PendingUser
 import logging
 
 logger = logging.getLogger(__name__)
@@ -39,6 +39,7 @@ async def fetch_calendar_app_data(request: Request):
             status_code=500
         )
     
+
 async def fetch_users_query(request: Request):
     try: 
         user_query = request.query_params.get('user', default=None)
@@ -59,6 +60,7 @@ async def fetch_users_query(request: Request):
                     "first_name": document["first_name"] if document["first_name"] else '',
                     "job_title": document["job_title"] if document["job_title"] else '',
                     "last_name": document["last_name"] if document["last_name"] else '',
+                    "_id": document["_id"] if document["_id"] else '',
                 }
                 user_search_results.append({"user": user_ref, "score": document.pop("score")})
 
@@ -97,3 +99,13 @@ async def fetch_users_query(request: Request):
             },
             status_code=500
         )
+    
+
+async def post_new_calendar(request: Request):
+    request_body = await request.json()
+    calendar_name = request_body['calendarName']
+    authorized_users = request_body['authorizedUsers']
+    view_only_users = request_body['viewOnlyUsers']
+    calendar_type = 'team'
+
+    # loop through and make all users in each list a pending user object for creating the calendar object

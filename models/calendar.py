@@ -12,6 +12,18 @@ import holidays
 # what year the calendar is for
 # color scheme set by user
 
+class PendingUser(BaseModel):
+    type: str = Field(default_factory=str) # 'authorized' or 'view_only'
+    user_id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+
+    model_config = {
+        "arbitrary_types_allowed": True,
+        "json_encoders": {
+            PyObjectId: str,
+          },
+    }
+    
+
 class Calendar(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     authorized_users: List[PyObjectId] = Field(default_factory=list)
@@ -22,17 +34,32 @@ class Calendar(BaseModel):
     created_on: datetime = Field(default_factory=datetime.now)
     events: list = Field(default_factory=list)
     name: str = Field(default_factory=str)
-    pending_users: list = Field(default_factory=list)
+    pending_users: List[PendingUser] = Field(default_factory=list)
     view_only_users: list = Field(default_factory=list)
 
 
-    def __init__(self, calendar_type, name, userId: PyObjectId, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(
+        self,
+        calendar_type,
+        name,
+        userId: PyObjectId,
+        authorized_users=None,
+        view_only_users=None, 
+        *args, 
+        **kwargs
+      ):
+          super().__init__(*args, **kwargs)
 
-        self.authorized_users = [userId]
-        self.calendar_type = calendar_type
-        self.created_by = userId
-        self.name = name
+          if calendar_type == 'personal':
+              self.authorized_users[userId]
+
+          if calendar_type == 'team':
+              self.authorized_users = authorized_users
+              self.view_only_users = view_only_users
+
+          self.calendar_type = calendar_type
+          self.created_by = userId
+          self.name = name
 
 
     model_config = {
