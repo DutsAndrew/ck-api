@@ -30,6 +30,7 @@ class User(BaseModel):
     notifications_read: List = Field(default_factory=list)
     notifications_unread: List = Field(default_factory=list)
     password: str = Field(required=True)
+    pending_calendars: List[PyObjectId] = Field(default_factory=list)
     pending_chats: List[PyObjectId] = Field(default_factory=list)
     pending_tasks: List[PyObjectId] = Field(default_factory=list)
     pending_teams: List[PyObjectId] = Field(default_factory=list)
@@ -47,7 +48,7 @@ class User(BaseModel):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.personal_calendar = Calendar(calendar_type="personal", name=f"{self.first_name}'s Personal Calendar", userId=self.id)
+        self.personal_calendar = Calendar(calendar_type="personal", name=f"{self.first_name}'s Personal Calendar", user_id=self.id)
 
     @field_validator('email')
     @classmethod
