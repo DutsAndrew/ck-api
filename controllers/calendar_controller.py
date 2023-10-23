@@ -2,6 +2,7 @@ from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
 from models.calendar import PendingUser, Calendar
 from fastapi.encoders import jsonable_encoder
+from bson import ObjectId
 import logging
 
 logger = logging.getLogger(__name__)
@@ -40,6 +41,66 @@ async def fetch_calendar_app_data(request: Request):
             status_code=500
         )
     
+
+async def fetch_all_user_calendar_data(request: Request, userEmail: str):
+    try:
+        user = await request.app.db['users'].find_one({
+            "email": userEmail
+        })
+        if not user:
+            return JSONResponse(
+                content={
+                    'detail': 'The account you are using does not exist'
+                },
+                status_code=404
+            )
+        else:
+            populated_calendars = await populate_all_calendars(request, user)
+            user['calendars'] = populated_calendars['calendars']
+            user['pending_calendars'] = populated_calendars['pending_calendars']
+
+            return JSONResponse(
+                content={
+                    'detail': 'All possible calendars fetched',
+                    'updated_user': user,
+                }
+            )
+        
+    except Exception as e:
+        logger.error(f"Error processing request: {e}")
+        return JSONResponse(
+            content={
+                'detail': 'There was an issue processing your request',
+            },
+            status_code=500
+        )
+    
+
+async def populate_all_calendars(request, user):
+    calendar_ids = [str(calendar_id) for calendar_id in user['calendars']]
+    pending_calendar_ids = [str(calendar_id) for calendar_id in user['pending_calendars']]
+    
+    # SETUP FUNCTION TO ADDITIONALLY POPULATE ALL USERS FOR EACH CALENDAR
+
+    calendars = []
+    async for calendar in request.app.db['calendars'].find({
+        '_id': {'$in': calendar_ids}
+    }):
+        calendars.append(calendar)
+
+    pending_calendars = []
+    async for pending_calendar in request.app.db['calendars'].find({
+        '_id': {'$in': pending_calendar_ids}
+    }):
+        pending_calendars.append(pending_calendar)
+
+    print(calendars, pending_calendars)
+
+    return {
+        'calendars': calendars,
+        'pending_calendars': pending_calendars,
+    }
+
 
 async def fetch_users_query(request: Request):
     try: 
@@ -119,7 +180,7 @@ async def post_new_calendar(request: Request):
         pending_users
     )
 
-    await upload_new_calendar(request, new_calendar, pending_users)
+    return await upload_new_calendar(request, new_calendar, pending_users)
 
 
 def compile_pending_users(authorized_users, view_only_users):
