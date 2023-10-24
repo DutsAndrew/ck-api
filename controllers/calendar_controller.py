@@ -95,6 +95,7 @@ async def populate_individual_calendars(request: Request, calendar_ids: list[str
     pending_user_ids = set()
     view_only_user_ids = set()
 
+    # POPULATE ALL CALENDARS AND STORE ALL USER REFS
     async for calendar in request.app.db['calendars'].find({
         '_id': {'$in': calendar_ids}
     }):
@@ -115,6 +116,7 @@ async def populate_individual_calendars(request: Request, calendar_ids: list[str
         'company': 1,
     }
 
+    # POPULATE ALL USER INSTANCES USING THE USER REFS
     authorized_users = await request.app.db['users'].find({
         '_id': {'$in': list(authorized_user_ids)}},
         projection=user_projection
@@ -125,19 +127,23 @@ async def populate_individual_calendars(request: Request, calendar_ids: list[str
         projection=user_projection
     ).to_list(None)
 
+    # CREATE DICT WITH USER REF TIED TO USER INSTANCE
     calendar_authorized_users_dict = {str(user['_id']): user for user in authorized_users}
     calendar_view_only_users_dict = {str(user['_id']): user for user in view_only_users}
 
+    # LOOP THROUGH CALENDARS TO STORE USER INSTANCES IN EACH CALENDAR
     for calendar in calendars:
         authorized_user_ids = calendar.get('authorized_users', [])
         view_only_user_ids = calendar.get('view_only_users', [])
         pending_user_ids = [str(pending_user.get('_id')) for pending_user in calendar.get('pending_users', [])]
 
+        # WAIT TO FIND ALL PENDING USERS FOR EACH CALENDAR INDIVIDUALLY TO MAINTAIN DATA STRUCTURE NEEDED
         pending_users = await request.app.db['users'].find({
             '_id': {'$in': pending_user_ids}},
             projection=user_projection
         ).to_list(None)
 
+        # MERGE POPULATED PENDING USER INSTANCE WITH THE ORIGINAL PENDING OBJECT TYPE
         pending_users_with_type = []
         for pending_user in calendar.get('pending_users'):
             matching_user = next((user for user in pending_users if user['_id'] == pending_user['_id']), None)
@@ -150,6 +156,7 @@ async def populate_individual_calendars(request: Request, calendar_ids: list[str
             else:
                 continue
 
+        # STORE ALL USERS TO THEIR RESPECTIVE CALENDAR
         calendar['authorized_users'] = [
             calendar_authorized_users_dict.get(str(user_id)) for user_id in authorized_user_ids
         ]
