@@ -80,26 +80,85 @@ async def populate_all_calendars(request, user):
     calendar_ids = [str(calendar_id) for calendar_id in user['calendars']]
     pending_calendar_ids = [str(calendar_id) for calendar_id in user['pending_calendars']]
     
-    # SETUP FUNCTION TO ADDITIONALLY POPULATE ALL USERS FOR EACH CALENDAR
-
-    calendars = []
-    async for calendar in request.app.db['calendars'].find({
-        '_id': {'$in': calendar_ids}
-    }):
-        calendars.append(calendar)
-
-    pending_calendars = []
-    async for pending_calendar in request.app.db['calendars'].find({
-        '_id': {'$in': pending_calendar_ids}
-    }):
-        pending_calendars.append(pending_calendar)
-
-    print(calendars, pending_calendars)
+    calendars = await populate_individual_calendars(request, calendar_ids)
+    pending_calendars = await populate_individual_calendars(request, pending_calendar_ids)
 
     return {
         'calendars': calendars,
         'pending_calendars': pending_calendars,
     }
+
+
+async def populate_individual_calendars(request: Request, calendar_ids: list[str]):
+    calendars = []
+    authorized_user_ids = set()
+    pending_user_ids = set()
+    view_only_user_ids = set()
+
+    async for calendar in request.app.db['calendars'].find({
+        '_id': {'$in': calendar_ids}
+    }):
+        calendars.append(calendar)
+        authorized_user_ids.update(calendar.get('authorized_users', []))
+        view_only_user_ids.update(calendar.get('view_only_users', []))
+
+        for pending_user in calendar.get('pending_users', []):
+            user_id = pending_user.get('_id')
+            if user_id:
+                pending_user_ids.add(user_id)
+
+    user_projection = {
+        'first_name': 1,
+        'last_name': 1,
+        'email': 1,
+        'job_title': 1,
+        'company': 1,
+    }
+
+    authorized_users = await request.app.db['users'].find({
+        '_id': {'$in': list(authorized_user_ids)}},
+        projection=user_projection
+    ).to_list(None)
+
+    view_only_users = await request.app.db['users'].find({
+        '_id': {'$in': list(view_only_user_ids)}},
+        projection=user_projection
+    ).to_list(None)
+
+    calendar_authorized_users_dict = {str(user['_id']): user for user in authorized_users}
+    calendar_view_only_users_dict = {str(user['_id']): user for user in view_only_users}
+
+    for calendar in calendars:
+        authorized_user_ids = calendar.get('authorized_users', [])
+        view_only_user_ids = calendar.get('view_only_users', [])
+        pending_user_ids = [str(pending_user.get('_id')) for pending_user in calendar.get('pending_users', [])]
+
+        pending_users = await request.app.db['users'].find({
+            '_id': {'$in': pending_user_ids}},
+            projection=user_projection
+        ).to_list(None)
+
+        pending_users_with_type = []
+        for pending_user in calendar.get('pending_users'):
+            matching_user = next((user for user in pending_users if user['_id'] == pending_user['_id']), None)
+            if matching_user:
+                combined_data = {
+                    'type': pending_user.get('type'),
+                    'user': matching_user  # Add the populated user instance
+                }
+                pending_users_with_type.append(combined_data)
+            else:
+                continue
+
+        calendar['authorized_users'] = [
+            calendar_authorized_users_dict.get(str(user_id)) for user_id in authorized_user_ids
+        ]
+        calendar['pending_users'] = pending_users_with_type
+        calendar['view_only_users'] = [
+            calendar_view_only_users_dict.get(str(user_id)) for user_id in view_only_user_ids
+        ]
+
+    return calendars
 
 
 async def fetch_users_query(request: Request):
