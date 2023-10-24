@@ -44,9 +44,13 @@ async def fetch_calendar_app_data(request: Request):
 
 async def fetch_all_user_calendar_data(request: Request, userEmail: str):
     try:
-        user = await request.app.db['users'].find_one({
-            "email": userEmail
-        })
+        user = await request.app.db['users'].find_one(
+            {"email": userEmail},
+            projection={
+                'calendars': 1,
+                'pending_calendars': 1,
+            },
+        )
         if not user:
             return JSONResponse(
                 content={
