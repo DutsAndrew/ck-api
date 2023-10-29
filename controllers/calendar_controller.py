@@ -326,3 +326,6 @@ async def upload_new_calendar(request: Request, new_calendar, pending_users):
                     },
                     status_code=500
                 )
+    
+async def remove_user_from_calendar(request: Request):
+    return

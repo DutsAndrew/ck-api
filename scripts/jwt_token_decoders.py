@@ -49,3 +49,7 @@ async def verify_bearer_token(request, decoded_token):
         })
     
     return verify_token is not None
+
+
+def decode_refresh_token(request: Request, authorization: str = Header(...)):
+    return

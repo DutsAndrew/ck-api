@@ -40,12 +40,13 @@ app.add_middleware(
 )
 
 
-# @app.middleware("http")
-# async def log_headers(request: Request, call_next):
-#     print("Request Headers:", request.headers)
-#     response = await call_next(request)
-#     print("Response Headers:", response.headers)
-#     return response
+@app.middleware("http")
+async def log_headers(request: Request, call_next):
+    print("Request Headers:", request.headers)
+    print("Cookies in request:", request.cookies)
+    response = await call_next(request)
+    print("Response Headers:", response.headers)
+    return response
 
 app.add_middleware(ErrorLoggingMiddleware)
 
