@@ -20,19 +20,12 @@ from routes.teams_routes import teams_router
 # import custom middleware
 from scripts.custom_middleware import ErrorLoggingMiddleware
 
-# CORS origins
-CORS_ORIGINS = [
-    "http://localhost",
-    "http://localhost:3000/",
-    "http://127.0.0.1:8000/",
-]
-
 app = FastAPI()
 
 # MIDDLEWARE CHAIN
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

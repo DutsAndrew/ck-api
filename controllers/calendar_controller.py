@@ -331,35 +331,39 @@ async def remove_user_from_calendar(request: Request, calendar_id: str, type: st
     user_to_remove_id = request.query_params.get('user')
 
     try:
+        # query user and calendar to perform operations
         user, calendar = await validate_user_and_calendar(request, user_making_request_email, calendar_id)
 
         if user is None or calendar is None:
             return JSONResponse(content={'detail': 'Invalid request'}, status_code=404)
 
+        # if user making request isn't authorized return immediately
         if not has_calendar_permissions(user, calendar):
             return JSONResponse(content={'detail': 'insufficient permissions'})
 
+        # remove user that was requested to be removed
         filtered_calendar = filter_out_user_from_calendar_list(user_to_remove_id, calendar, type)
 
+        # just a validity check to ensure that an API call wasn't made with a false type, return if that's the case
         if filtered_calendar is None:
             return JSONResponse(content={'detail': 'Failed to update calendar'}, status_code=422)
 
+        # update calendar with new filtered calendar
         update_calendar = await request.app.db['calendars'].replace_one({'_id': calendar_id}, filtered_calendar)
 
         if update_calendar is None:
             return JSONResponse(content={'detail': 'Failed to update calendar to remove user'}, status_code=422)
         
-        updated_calendar = await request.app.db['calendars'].find_one( # RE-CONFIGURE TO POPULATE ALL CALENDAR FIELDS BEFORE RETURNING
-            {'_id': calendar_id}
-        )
+        # find updated calendar and populate all users on it before returning
+        updated_and_repopulated_calendar = await populate_one_calendar(request, calendar_id)
 
-        if updated_calendar is None:
+        if updated_and_repopulated_calendar is None:
             return JSONResponse(content={'detail': 'Failed to refetch updated calendar with removed user'}, status_code=404)
         
         return JSONResponse(
             content={
                 'detail': 'User successfully removed from calendar',
-                'updated_calendar': updated_calendar,
+                'updated_calendar': updated_and_repopulated_calendar,
             },
             status_code=200
         )
@@ -395,4 +399,67 @@ def filter_out_user_from_calendar_list(user_to_remove_id, calendar, type):
     else:
         return None # invalid type
     
+    return calendar
+
+
+async def populate_one_calendar(request: Request, calendar_id: str):
+    calendar = await request.app.db['calendars'].find_one({'_id': calendar_id})
+    
+    if calendar is None:
+        return None
+    
+    # set lists for storing user ids for looking up in db
+    authorized_user_ids = list(calendar.get('authorized_users', []))
+    view_only_user_ids = list(calendar.get('view_only_users', []))
+    pending_user_ids = [] # pending users are nested, need to loop through and retrieve id below
+
+    # pending users are nested, loop through to retrieve and store
+    for pending_user in calendar.get('pending_users', []):
+        user_id = pending_user.get('_id')
+        if user_id:
+            pending_user_ids.add(user_id)
+    
+    # entire user object should not be pulled, just grab these fields
+    user_projection = {
+        'first_name': 1,
+        'last_name': 1,
+        'email': 1,
+        'job_title': 1,
+        'company': 1,
+    }
+
+    # loop through and query ALL users for the following 3 lists
+    authorized_users = await request.app.db['users'].find({
+        '_id': {'$in': authorized_user_ids}},
+        projection=user_projection
+    ).to_list(None)
+    view_only_users = await request.app.db['users'].find({
+        '_id': {'$in': view_only_user_ids}},
+        projection=user_projection
+    ).to_list(None)
+    pending_users = await request.app.db['users'].find({
+        '_id': {'$in': pending_user_ids}},
+        projection=user_projection
+    ).to_list(None)
+
+    # if any list fails return early as None as an error
+    if authorized_users is None or view_only_users is None or pending_users is None:
+        return None
+
+    # loop through and assign populated users back to their nested structure with type
+    pending_users_with_type = []
+    for pending_user in calendar.get('pending_users'):
+        matching_user = next((user for user in pending_users if user['_id'] == pending_user['_id']), None)
+        if matching_user:
+            combined_data = {
+                'type': pending_user.get('type'),
+                'user': matching_user
+            }
+            pending_users_with_type.append(combined_data)
+
+    # assign populated user objects back to calendar
+    calendar['authorized_users'] = authorized_users
+    calendar['view_only_users'] = view_only_users
+    calendar['pending_users'] = pending_users_with_type
+
     return calendar
