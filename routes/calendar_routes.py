@@ -1,7 +1,6 @@
-from fastapi import APIRouter, Request, Depends, Cookie
+from fastapi import APIRouter, Request, Depends
 from controllers import calendar_controller
 from scripts.jwt_token_decoders import process_bearer_token
-from typing import Annotated
 
 calendar_router = APIRouter()
 
@@ -21,11 +20,6 @@ async def get_user_query(request: Request, token: str | bool = Depends(process_b
 async def post_calendar_upload(request: Request, token: str | bool = Depends(process_bearer_token)):
     return await calendar_controller.post_new_calendar(request)
 
-@calendar_router.delete('/removeUserFromCalendar')
-async def delete_user(
-    request: Request,
-    token: str | bool = Depends(process_bearer_token),
-    refresh_token: Annotated[str | None, Cookie()] = None
-):
-    return {'refresh_token': refresh_token}
-    # return await calendar_controller.remove_user_from_calendar(request)
+@calendar_router.delete('/{id}/removeUserFromCalendar/{type}')
+async def delete_user(id: str, type: str, request: Request, token: str | bool = Depends(process_bearer_token)):
+    return await calendar_controller.remove_user_from_calendar(request, id, type, token['email'])

@@ -327,5 +327,72 @@ async def upload_new_calendar(request: Request, new_calendar, pending_users):
                     status_code=500
                 )
     
-async def remove_user_from_calendar(request: Request):
-    return
+async def remove_user_from_calendar(request: Request, calendar_id: str, type: str, user_making_request_email: str):
+    user_to_remove_id = request.query_params.get('user')
+
+    try:
+        user, calendar = await validate_user_and_calendar(request, user_making_request_email, calendar_id)
+
+        if user is None or calendar is None:
+            return JSONResponse(content={'detail': 'Invalid request'}, status_code=404)
+
+        if not has_calendar_permissions(user, calendar):
+            return JSONResponse(content={'detail': 'insufficient permissions'})
+
+        filtered_calendar = filter_out_user_from_calendar_list(user_to_remove_id, calendar, type)
+
+        if filtered_calendar is None:
+            return JSONResponse(content={'detail': 'Failed to update calendar'}, status_code=422)
+
+        update_calendar = await request.app.db['calendars'].replace_one({'_id': calendar_id}, filtered_calendar)
+
+        if update_calendar is None:
+            return JSONResponse(content={'detail': 'Failed to update calendar to remove user'}, status_code=422)
+        
+        updated_calendar = await request.app.db['calendars'].find_one( # RE-CONFIGURE TO POPULATE ALL CALENDAR FIELDS BEFORE RETURNING
+            {'_id': calendar_id}
+        )
+
+        if updated_calendar is None:
+            return JSONResponse(content={'detail': 'Failed to refetch updated calendar with removed user'}, status_code=404)
+        
+        return JSONResponse(
+            content={
+                'detail': 'User successfully removed from calendar',
+                'updated_calendar': updated_calendar,
+            },
+            status_code=200
+        )
+
+    except Exception as e:
+        logger.error(f"Error processing request: {e}")
+        return JSONResponse(
+            content={'detail': 'There was an issue processing your request'},
+            status_code=500
+        )
+    
+
+async def validate_user_and_calendar(request, user_email, calendar_id):
+    user = await request.app.db['users'].find_one({'email': user_email})
+    calendar = await request.app.db['calendars'].find_one({'_id': calendar_id})
+    return user, calendar
+
+
+def has_calendar_permissions(user, calendar):
+    return user is not None and (calendar['created_by'] == user['_id'] or user['_id'] in calendar['authorized_users'])
+    
+
+def filter_out_user_from_calendar_list(user_to_remove_id, calendar, type):
+    if type == 'authorized':
+        if calendar['created_by'] == user_to_remove_id: # prevent users from removing creator of calendar
+            return None
+        calendar['authorized_users'].remove(user_to_remove_id)
+    elif type == 'pending':
+        updated_pending_users = [user for user in calendar['pending_users'] if user['_id'] != user_to_remove_id] # users are nested in pending list, need to loop through to modify
+        calendar['pending_users'] = updated_pending_users
+    elif type == 'view-only':
+        calendar['view_only_users'].remove(user_to_remove_id)
+    else:
+        return None # invalid type
+    
+    return calendar

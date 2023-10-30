@@ -32,7 +32,7 @@ app = FastAPI()
 # MIDDLEWARE CHAIN
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://127.0.0.1:5173"],
+    allow_origins=["http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -40,13 +40,13 @@ app.add_middleware(
 )
 
 
-@app.middleware("http")
-async def log_headers(request: Request, call_next):
-    print("Request Headers:", request.headers)
-    print("Cookies in request:", request.cookies)
-    response = await call_next(request)
-    print("Response Headers:", response.headers)
-    return response
+# @app.middleware("http")
+# async def log_headers(request: Request, call_next):
+#     print("Request Headers:", request.headers)
+#     print("Cookies in request:", request.cookies)
+#     response = await call_next(request)
+#     print("Response Headers:", response.headers)
+#     return response
 
 app.add_middleware(ErrorLoggingMiddleware)
 
