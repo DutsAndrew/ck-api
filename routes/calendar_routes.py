@@ -23,3 +23,21 @@ async def post_calendar_upload(request: Request, token: str | bool = Depends(pro
 @calendar_router.delete('/{id}/removeUserFromCalendar/{type}')
 async def delete_user(id: str, type: str, request: Request, token: str | bool = Depends(process_bearer_token)):
     return await calendar_controller.remove_user_from_calendar(request, id, type, token['email'])
+
+@calendar_router.post('/{calendar_id}/addUser/{user_id}/{type_of_user}/{type_of_pending_user}')
+async def post_new_user(
+        calendar_id: str,
+        user_id: str, 
+        type_of_user: str,
+        type_of_pending_user: str,
+        request: Request, 
+        token: str | bool = Depends(process_bearer_token)
+    ):
+        return await calendar_controller.add_user_to_calendar(
+             request, 
+             calendar_id, 
+             user_id, 
+             type_of_user, 
+             type_of_pending_user, 
+             token['email']
+        )

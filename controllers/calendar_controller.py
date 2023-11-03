@@ -394,7 +394,7 @@ def filter_out_user_from_calendar_list(user_to_remove_id, calendar, type):
     elif type == 'pending':
         updated_pending_users = [user for user in calendar['pending_users'] if user['_id'] != user_to_remove_id] # users are nested in pending list, need to loop through to modify
         calendar['pending_users'] = updated_pending_users
-    elif type == 'view-only':
+    elif type == 'view_only':
         calendar['view_only_users'].remove(user_to_remove_id)
     else:
         return None # invalid type
@@ -417,7 +417,7 @@ async def populate_one_calendar(request: Request, calendar_id: str):
     for pending_user in calendar.get('pending_users', []):
         user_id = pending_user.get('_id')
         if user_id:
-            pending_user_ids.add(user_id)
+            pending_user_ids.append(user_id)
     
     # entire user object should not be pulled, just grab these fields
     user_projection = {
@@ -463,3 +463,107 @@ async def populate_one_calendar(request: Request, calendar_id: str):
     calendar['pending_users'] = pending_users_with_type
 
     return calendar
+
+
+async def add_user_to_calendar(
+        request: Request, 
+        calendar_id: str, 
+        user_id: str, 
+        type_of_user: str, 
+        type_of_pending_user: str,
+        email_of_user_making_change: str
+    ):
+      try:
+          user_making_request, calendar = await validate_user_and_calendar(request, email_of_user_making_change, calendar_id)
+          if user_making_request is None or calendar is None:
+              return JSONResponse(content={'detail': 'There was an issue processing the user and calendar sent'}, status_code=404)
+                    
+          user_to_add = await request.app.db['users'].find_one({'email': email_of_user_making_change}, projection={})
+
+          if user_to_add is None:
+              return JSONResponse(content={'detail': 'The user to add cannot be found'}, status_code=404)
+          
+          if not has_calendar_permissions(user_making_request, calendar):
+              return JSONResponse(content={'detail': 'The user making that request is not authorized'}, status_code=422)
+                    
+          updated_array = await append_new_user_to_calendar_user_list(
+              request,
+              user_id, 
+              calendar, 
+              type_of_user, 
+              type_of_pending_user,
+          )
+
+          if updated_array is None:
+              return JSONResponse(content={'detail': 'There was an issue updating the user list of that calendar'}, status_code=422) 
+          
+          updated_calendar = await request.app.db['calendars'].find_one({'_id': calendar_id})
+
+          if not verify_user_was_added_to_calendar(updated_calendar, type_of_user, user_id):
+              return JSONResponse(content={'detail': 'User was not added to calendar successfully'}, status_code=422)
+                    
+          populated_calendar = await populate_one_calendar(request, updated_calendar['_id'])
+          
+          return JSONResponse(content={
+              'detail': 'We successfully added user to your calendar',
+              'updated_calendar': populated_calendar,
+          }, status_code=200)
+      
+      except Exception as e:
+          logger.error(f"Error processing request: {e}")
+          return JSONResponse(
+              content={'detail': 'There was an issue processing your request'},
+              status_code=500
+          )
+
+
+async def append_new_user_to_calendar_user_list(
+        request: Request, 
+        user_id: str, 
+        calendar: Calendar, 
+        type_of_user: str, 
+        type_of_pending_user: str
+    ):
+        if type_of_user == 'pending':
+            pending_users = calendar.get('pending_users', [])
+            new_pending_user = PendingUser(type_of_pending_user, user_id)
+            if new_pending_user is None:
+                return None
+            converted_user = jsonable_encoder(new_pending_user)
+            pending_users.append(converted_user)
+            return await request.app.db['calendars'].update_one(
+                {'_id': calendar['_id']}, {"$set": {"pending_users": pending_users}}
+            )
+        elif type_of_user == 'authorized':
+            authorized_users = calendar.get('authorized_users', [])
+            authorized_users.append(user_id)
+            return await request.app.db['calendars'].update_one(
+                {'_id': calendar['_id']}, {"$set": {"authorized_users": authorized_users}}
+            )
+        elif type_of_user == 'view_only':
+            view_only_users = calendar.get('view_only_users', [])
+            view_only_users.append(user_id)
+            return await request.app.db['calendars'].update_one(
+                {'_id': calendar['_id']}, {"$set": {"view_only_users": view_only_users}}
+            )
+        else:
+            return None
+        
+
+def verify_user_was_added_to_calendar(
+        updated_calendar: Calendar,
+        type_of_user,
+        user_id: str
+    ):
+        if type_of_user == 'pending':
+            for obj in updated_calendar['pending_users']:
+                if obj.get('_id') == user_id:
+                    return True
+        elif type_of_user == 'authorized':
+            if user_id in updated_calendar['authorized_users']:
+                return True
+        elif type_of_user == 'view_only':
+            if user_id in updated_calendar['view_only_users']:
+                return True
+        else:
+            return False
