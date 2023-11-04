@@ -460,8 +460,8 @@ async def populate_one_calendar(request: Request, calendar_id: str):
     # assign populated user objects back to calendar
     calendar['authorized_users'] = authorized_users
     calendar['view_only_users'] = view_only_users
-    calendar['pending_users'] = pending_users_with_type
-
+    calendar['pending_users'] = pending_users_with_type\
+    
     return calendar
 
 
@@ -478,7 +478,7 @@ async def add_user_to_calendar(
           if user_making_request is None or calendar is None:
               return JSONResponse(content={'detail': 'There was an issue processing the user and calendar sent'}, status_code=404)
                     
-          user_to_add = await request.app.db['users'].find_one({'email': email_of_user_making_change}, projection={})
+          user_to_add = await request.app.db['users'].find_one({'_id': user_id}, projection={})
 
           if user_to_add is None:
               return JSONResponse(content={'detail': 'The user to add cannot be found'}, status_code=404)
@@ -495,9 +495,9 @@ async def add_user_to_calendar(
           )
 
           if updated_array is None:
-              return JSONResponse(content={'detail': 'There was an issue updating the user list of that calendar'}, status_code=422) 
+              return JSONResponse(content={'detail': 'There was an issue adding that user, either the user was already in the list, or we failed to update the list'}, status_code=422) 
           
-          updated_calendar = await request.app.db['calendars'].find_one({'_id': calendar_id})
+          updated_calendar = await request.app.db['calendars'].find_one({'_id': calendar['_id']})
 
           if not verify_user_was_added_to_calendar(updated_calendar, type_of_user, user_id):
               return JSONResponse(content={'detail': 'User was not added to calendar successfully'}, status_code=422)
@@ -526,28 +526,39 @@ async def append_new_user_to_calendar_user_list(
     ):
         if type_of_user == 'pending':
             pending_users = calendar.get('pending_users', [])
+            for pending_user in pending_users:
+                if pending_user['_id'] == user_id:
+                    return None
             new_pending_user = PendingUser(type_of_pending_user, user_id)
             if new_pending_user is None:
                 return None
             converted_user = jsonable_encoder(new_pending_user)
             pending_users.append(converted_user)
-            return await request.app.db['calendars'].update_one(
+            await request.app.db['calendars'].update_one(
                 {'_id': calendar['_id']}, {"$set": {"pending_users": pending_users}}
             )
         elif type_of_user == 'authorized':
             authorized_users = calendar.get('authorized_users', [])
+            for authorized_user in authorized_users:
+                if authorized_user == user_id:
+                    return None
             authorized_users.append(user_id)
-            return await request.app.db['calendars'].update_one(
+            await request.app.db['calendars'].update_one(
                 {'_id': calendar['_id']}, {"$set": {"authorized_users": authorized_users}}
             )
         elif type_of_user == 'view_only':
             view_only_users = calendar.get('view_only_users', [])
+            for view_only_user in view_only_users:
+                if view_only_user == user_id:
+                    return None
             view_only_users.append(user_id)
-            return await request.app.db['calendars'].update_one(
+            await request.app.db['calendars'].update_one(
                 {'_id': calendar['_id']}, {"$set": {"view_only_users": view_only_users}}
             )
         else:
             return None
+        
+        return True
         
 
 def verify_user_was_added_to_calendar(
