@@ -250,7 +250,7 @@ async def post_new_calendar(request: Request):
         pending_users
     )
 
-    return await upload_new_calendar(request, new_calendar, pending_users)
+    return await upload_new_calendar(request, new_calendar, pending_users, user_id)
 
 
 def compile_pending_users(authorized_users, view_only_users):
@@ -268,64 +268,65 @@ def compile_pending_users(authorized_users, view_only_users):
     return pending_users
 
     
-async def upload_new_calendar(request: Request, new_calendar, pending_users):
+async def upload_new_calendar(request: Request, new_calendar: Calendar, pending_users, user_id: str):
     try:
         calendar_data = jsonable_encoder(new_calendar)
         calendar_upload = await request.app.db['calendars'].insert_one(calendar_data)
         calendar_id = str(calendar_upload.inserted_id)
-        calendar_to_return = await request.app.db['calendars'].find_one({
-            "_id": calendar_id
-        })
-        if calendar_upload and calendar_to_return:
-            # loop through each user to add the calendar ref into their user instance for pending invites
-            successful_users_updated = 0
-            unsuccessful_users_updated = 0
-            for user in pending_users:
-                update_user = await request.app.db['users'].find_one_and_update(
-                    {"_id": user.user_id},
-                    {"$push": {"pending_calendars": calendar_id}},
-                )
-                if update_user:
-                    successful_users_updated += 1
-                else:
-                    unsuccessful_users_updated += 1
-            if unsuccessful_users_updated > 0:
-                return JSONResponse(
-                    content={
-                        'detail': 'Calendar created, all users were not invited successfully, you may want to remove and re-invite users in the Calendar Editor to ensure all users are invited correctly',
-                        'calendar': calendar_to_return,
-                    },
-                    status_code=200
-                )
-            if successful_users_updated == len(pending_users):
-                return JSONResponse(
-                        content={
-                            'detail': 'Calendar created and all necessary users added',
-                            'calendar': calendar_to_return,
-                        },
-                        status_code=200
-                    )
-            else:
-                return JSONResponse(
-                    content={
-                        'detail': 'Calendar created and all necessary users added, calendar not retrieved',
-                    }
-                )      
-        else:
+        uploaded_calendar = await request.app.db['calendars'].find_one({'_id': calendar_id})
+        updated_user_who_created_calendar = await request.app.db['users'].update_one(
+            {'_id': str(user_id)}, {'$push': {'calendars': calendar_id}})
+
+        if calendar_upload is None or uploaded_calendar is None or updated_user_who_created_calendar is None:
             return JSONResponse(
-                content={
-                    'detail': 'Failed to save calendar',
-                },
+                content={'detail': 'Failed to save, retrieve, and update calendar to user'},
                 status_code=500
             )
+
+        successful_users_updated = 0
+        unsuccessful_users_updated = 0
+
+        for user in pending_users:
+            update_user = await request.app.db['users'].find_one_and_update(
+                {"_id": user.user_id}, {"$push": {"pending_calendars": calendar_id}}
+            )
+
+            if update_user is not None:
+                successful_users_updated += 1
+            else:
+                unsuccessful_users_updated += 1
+
+        if unsuccessful_users_updated > 0:
+            return JSONResponse(
+                content={
+                    'detail': 'Calendar created, all users were not invited successfully, you may want to remove and re-invite users in the Calendar Editor to ensure all users are invited correctly',
+                    'calendar': uploaded_calendar,
+                },
+                status_code=200
+            )
+        
+        if successful_users_updated == len(pending_users) or (successful_users_updated == 0 and unsuccessful_users_updated == 0):
+            populated_calendar = await populate_one_calendar(request, calendar_id)
+            if populated_calendar is None:
+                return JSONResponse(content={'detail': 'Calendar was not able to be populated'}, status_code=422)
+            
+            return JSONResponse(
+                content={
+                    'detail': 'Calendar created and all necessary users added',
+                    'calendar': populated_calendar,
+                },
+                status_code=200
+            )
+        
+        return JSONResponse(content={'detail': 'Something went wrong'})
+
     except Exception as e:
-                logger.error(f"Error processing request: {e}")
-                return JSONResponse(
-                    content={
-                        'detail': 'There was an issue processing your request'
-                    },
-                    status_code=500
-                )
+        logger.error(f"Error processing request: {e}")
+        return JSONResponse(
+            content={'detail': 'There was an issue processing your request'},
+            status_code=500
+        )
+
     
 async def remove_user_from_calendar(request: Request, calendar_id: str, type: str, user_making_request_email: str):
     user_to_remove_id = request.query_params.get('user')
