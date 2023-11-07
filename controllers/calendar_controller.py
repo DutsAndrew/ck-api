@@ -579,3 +579,7 @@ def verify_user_was_added_to_calendar(
                 return True
         else:
             return False
+        
+
+async def delete_calendar(request: Request, calendar_id: str, user_id: str):
+    return
