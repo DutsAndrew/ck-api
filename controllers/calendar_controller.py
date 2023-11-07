@@ -582,4 +582,51 @@ def verify_user_was_added_to_calendar(
         
 
 async def delete_calendar(request: Request, calendar_id: str, user_id: str):
-    return
+    try:
+        user = await request.app.db['users'].find_one({'_id': user_id})
+        calendar = await request.app.db['calendars'].find_one({'_id': calendar_id})
+
+        if user is None or calendar is None:
+            return JSONResponse(content={'detail': 'Invalid data requested'}, status_code=404)
+
+        if calendar['created_by'] != user['_id']:
+            return JSONResponse(content={'detail': 'You cannot delete this calendar as you are not it\'s creator'}, status_code=422)
+
+        all_user_ids = compile_all_user_ids_from_calendar(calendar, user['_id'])
+        await remove_calendar_id_from_all_users(request, all_user_ids, calendar['_id'])
+        calendar_delete = await request.app.db['calendars'].delete_one({'_id': calendar['_id']})
+
+        if calendar_delete is None:
+            return JSONResponse(content={'detail': 'There were issues deleting that calendar'}, status_code=422)
+
+        return JSONResponse(content={'detail': 'Calendar deleted', 'calendar_id': calendar['_id']}, status_code=200)
+    
+    except Exception as e:
+        logger.error(f"Error processing request: {e}")
+        return JSONResponse(content={'detail': 'There was an issue processing your request'}, status_code=500)
+
+
+def compile_all_user_ids_from_calendar(calendar, user_id):
+    all_user_ids = [user_id]
+
+    all_user_ids.extend(calendar['authorized_users'])
+    all_user_ids.extend(calendar['view_only_users'])
+
+    for pending_user in calendar['pending_users']:
+        all_user_ids.append(pending_user['_id'])
+
+    return all_user_ids
+
+
+async def remove_calendar_id_from_all_users(request: Request, all_user_ids: list[str], calendar_id: str):
+    async for user in request.app.db['users'].find({'_id': {'$in': all_user_ids}}):
+        if calendar_id in user['calendars']:
+            await request.app.db['users'].update_one(
+                {'_id': user['_id']}, 
+                {'$pull': {'calendars': calendar_id}}
+            )
+        if calendar_id in user['pending_calendars']:
+            await request.app.db['users'].update_one(
+                {'_id': user['_id']}, 
+                {'$pull': {'pending_calendars': calendar_id}}
+            )

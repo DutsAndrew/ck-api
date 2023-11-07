@@ -41,3 +41,7 @@ async def post_new_user(
              type_of_pending_user, 
              token['email']
         )
+
+@calendar_router.delete('/{calendar_id}/deleteCalendar/{user_id}')
+async def delete_calendar(request: Request, calendar_id: str, user_id: str, token: str | bool = Depends(process_bearer_token)):
+     return await calendar_controller.delete_calendar(request, calendar_id, user_id)
