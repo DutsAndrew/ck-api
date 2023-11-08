@@ -24,12 +24,11 @@ async def post_calendar_upload(request: Request, token: str | bool = Depends(pro
 async def delete_user(calendar_id: str, type: str, user_id: str, request: Request, token: str | bool = Depends(process_bearer_token)):
     return await calendar_controller.remove_user_from_calendar(request, calendar_id, type, user_id, token['email'])
 
-@calendar_router.post('/{calendar_id}/addUser/{user_id}/{type_of_user}/{type_of_pending_user}')
+@calendar_router.post('/{calendar_id}/addUser/{user_id}/{type_of_user}')
 async def post_new_user(
         calendar_id: str,
         user_id: str, 
         type_of_user: str,
-        type_of_pending_user: str,
         request: Request, 
         token: str | bool = Depends(process_bearer_token)
     ):
@@ -38,7 +37,6 @@ async def post_new_user(
              calendar_id, 
              user_id, 
              type_of_user, 
-             type_of_pending_user, 
              token['email']
         )
 
@@ -48,4 +46,4 @@ async def delete_calendar(request: Request, calendar_id: str, user_id: str, toke
 
 @calendar_router.delete('/{calendar_id}/leaveCalendar/{user_id}')
 async def delete_user_from_calendar(request: Request, calendar_id: str, user_id: str, token: str | bool = Depends(process_bearer_token)):
-     return await calendar_controller.user_leave_calendar_request(request, calendar_id, user_id, token['email'])
+     return await calendar_controller.user_leave_calendar_request(request, calendar_id, user_id)

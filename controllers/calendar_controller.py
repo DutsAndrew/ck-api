@@ -469,7 +469,6 @@ async def add_user_to_calendar(
         calendar_id: str, 
         user_id: str, 
         type_of_user: str, 
-        type_of_pending_user: str,
         email_of_user_making_change: str
     ):
       try:
@@ -490,7 +489,6 @@ async def add_user_to_calendar(
               user_id, 
               calendar, 
               type_of_user, 
-              type_of_pending_user,
           )
 
           if updated_array is None:
@@ -516,48 +514,26 @@ async def add_user_to_calendar(
           )
 
 
+# NEED TO SETUP SO THAT ALL USERS ARE STORED AS PENDING USERS
 async def append_new_user_to_calendar_user_list(
         request: Request, 
         user_id: str, 
         calendar: Calendar, 
         type_of_user: str, 
-        type_of_pending_user: str
     ):
-        if type_of_user == 'pending':
-            pending_users = calendar.get('pending_users', [])
-            for pending_user in pending_users:
-                if pending_user['_id'] == user_id:
-                    return None
-            new_pending_user = PendingUser(type_of_pending_user, user_id)
-            if new_pending_user is None:
-                return None
-            converted_user = jsonable_encoder(new_pending_user)
-            pending_users.append(converted_user)
-            await request.app.db['calendars'].update_one(
-                {'_id': calendar['_id']}, {"$set": {"pending_users": pending_users}}
-            )
-        elif type_of_user == 'authorized':
-            authorized_users = calendar.get('authorized_users', [])
-            for authorized_user in authorized_users:
-                if authorized_user == user_id:
-                    return None
-            authorized_users.append(user_id)
-            await request.app.db['calendars'].update_one(
-                {'_id': calendar['_id']}, {"$set": {"authorized_users": authorized_users}}
-            )
-        elif type_of_user == 'view_only':
-            view_only_users = calendar.get('view_only_users', [])
-            for view_only_user in view_only_users:
-                if view_only_user == user_id:
-                    return None
-            view_only_users.append(user_id)
-            await request.app.db['calendars'].update_one(
-                {'_id': calendar['_id']}, {"$set": {"view_only_users": view_only_users}}
-            )
-        else:
+        new_pending_user = PendingUser(type_of_user, user_id)
+        if new_pending_user is None:
             return None
-        
-        return True
+        converted_user = jsonable_encoder(new_pending_user)
+        updated_calendar = await request.app.db['calendars'].update_one(
+            {'_id': calendar['_id']},
+            {'$push': {'pending_users': converted_user}}
+        )
+
+        if updated_calendar is None:
+            return None
+        else:
+            return updated_calendar
         
 
 def verify_user_was_added_to_calendar(
@@ -630,5 +606,42 @@ async def remove_calendar_id_from_all_users(request: Request, all_user_ids: list
             )
 
 
-async def user_leave_calendar_request(request, calendar_id, user_id, user_making_request):
-    return
+async def user_leave_calendar_request(request, calendar_id, user_id):
+    try:
+        calendar = await request.app.db['calendars'].find_one({'_id': calendar_id})
+        user = await request.app.db['users'].find_one({'_id': user_id})
+
+        if calendar is None or user is None:
+            return JSONResponse(content={'detail': 'The user or calendar sent do not exist'}, status_code=404)
+
+        if calendar['created_by'] == user['_id']:
+            return JSONResponse(content={'detail': 'You cannot leave a calendar you have created'})
+
+        updated_user = await request.app.db['users'].update_one(
+            {'_id': user['_id']},
+            {'$pull': {'calendars': calendar['_id']}}
+        )
+
+        updated_calendar = None
+        if user['_id'] in calendar['authorized_users']:
+            updated_calendar = await request.app.db['calendars'].update_one(
+                {'_id': calendar['_id']},
+                {'$pull': {'authorized_users': user['_id']}}
+            )
+        if user['_id'] in calendar['view_only_users']:
+            updated_calendar = await request.app.db['calendars'].update_one(
+                {'_id': calendar['_id']},
+                {'$pull': {'view_only_users': user['_id']}}
+            )
+
+        if updated_calendar is None or updated_user is None:
+            return JSONResponse(content={'detail': 'Failed to remove user from calendar'}, status_code=422)
+        
+        return JSONResponse(content={
+            'detail': 'Successfully removed user',
+            'calendar_id_to_remove': calendar['_id']
+        })
+        
+    except Exception as e:
+        logger.error(f"Error processing request: {e}")
+        return JSONResponse(content={'detail': 'There was an issue processing your request'}, status_code=500)
