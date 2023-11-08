@@ -20,9 +20,9 @@ async def get_user_query(request: Request, token: str | bool = Depends(process_b
 async def post_calendar_upload(request: Request, token: str | bool = Depends(process_bearer_token)):
     return await calendar_controller.post_new_calendar(request)
 
-@calendar_router.delete('/{id}/removeUserFromCalendar/{type}')
-async def delete_user(id: str, type: str, request: Request, token: str | bool = Depends(process_bearer_token)):
-    return await calendar_controller.remove_user_from_calendar(request, id, type, token['email'])
+@calendar_router.delete('/{calendar_id}/{type}/removeUserFromCalendar/{user_id}')
+async def delete_user(calendar_id: str, type: str, user_id: str, request: Request, token: str | bool = Depends(process_bearer_token)):
+    return await calendar_controller.remove_user_from_calendar(request, calendar_id, type, user_id, token['email'])
 
 @calendar_router.post('/{calendar_id}/addUser/{user_id}/{type_of_user}/{type_of_pending_user}')
 async def post_new_user(
@@ -45,3 +45,7 @@ async def post_new_user(
 @calendar_router.delete('/{calendar_id}/deleteCalendar/{user_id}')
 async def delete_calendar(request: Request, calendar_id: str, user_id: str, token: str | bool = Depends(process_bearer_token)):
      return await calendar_controller.delete_calendar(request, calendar_id, user_id)
+
+@calendar_router.delete('/{calendar_id}/leaveCalendar/{user_id}')
+async def delete_user_from_calendar(request: Request, calendar_id: str, user_id: str, token: str | bool = Depends(process_bearer_token)):
+     return await calendar_controller.user_leave_calendar_request(request, calendar_id, user_id, token['email'])
