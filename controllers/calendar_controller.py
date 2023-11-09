@@ -541,18 +541,11 @@ def verify_user_was_added_to_calendar(
         type_of_user,
         user_id: str
     ):
-        if type_of_user == 'pending':
-            for obj in updated_calendar['pending_users']:
-                if obj.get('_id') == user_id:
-                    return True
-        elif type_of_user == 'authorized':
-            if user_id in updated_calendar['authorized_users']:
+        pending_users = updated_calendar.get('pending_users', [])
+        for pending_user in pending_users:
+            if pending_user['_id'] == user_id and pending_user['type'] == type_of_user:
                 return True
-        elif type_of_user == 'view_only':
-            if user_id in updated_calendar['view_only_users']:
-                return True
-        else:
-            return False
+        return False
         
 
 async def delete_calendar(request: Request, calendar_id: str, user_id: str):
