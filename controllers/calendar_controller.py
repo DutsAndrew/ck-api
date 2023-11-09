@@ -335,14 +335,14 @@ async def remove_user_from_calendar(request: Request, calendar_id: str, type: st
 
         if user is None or calendar is None:
             return JSONResponse(content={'detail': 'Invalid request'}, status_code=404)
-        
+                
         if user_id == calendar['created_by']:
-            return JSONResponse(content={'The creator of the calendar can never be removed'}, status_code=422)
-
+            return JSONResponse(content={'detail': 'The creator of the calendar can never be removed'}, status_code=422)
+        
         # if user making request isn't authorized return immediately
         if not has_calendar_permissions(user, calendar):
             return JSONResponse(content={'detail': 'insufficient permissions'})
-
+        
         # remove user that was requested to be removed
         filtered_calendar = filter_out_user_from_calendar_list(user_id, calendar, type)
 
