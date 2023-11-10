@@ -2,7 +2,6 @@ from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
 from models.calendar import PendingUser, Calendar
 from fastapi.encoders import jsonable_encoder
-from bson import ObjectId
 import logging
 
 logger = logging.getLogger(__name__)

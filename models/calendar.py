@@ -4,14 +4,28 @@ from typing import List
 from models.bson_object_id import PyObjectId
 from models.event import Event
 from bson import ObjectId
-import calendar
-import holidays
 
 ## Calendars should have the following:
 # what team or user the calendar belongs to
 # what events have been created and added to calendar
 # what year the calendar is for
 # color scheme set by user
+
+class CalendarNote(BaseModel):
+    id: PyObjectId = Field(default_factory=PyObjectId, alias='_id')
+    date: datetime = Field(required=True)
+    note: str = Field(default_factory=str, required=True)
+
+    model_config = {
+        "populate_by_name": True,
+        "arbitrary_types_allowed": True,
+        "json_encoders": {
+            ObjectId: str,
+            PyObjectId: str,
+            datetime: lambda dt: dt.strftime('%Y-%m-%d %H:%M:%S')
+          },
+    }
+
 
 class PendingUser(BaseModel):
     type: str = Field(default_factory=str) # 'authorized' or 'view_only'
@@ -33,6 +47,7 @@ class PendingUser(BaseModel):
 class Calendar(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     authorized_users: List[PyObjectId] = Field(default_factory=list)
+    calendar_notes: List[CalendarNote] = Field(default_factory=list)
     calendar_type: str = Field(default_factory=str)
     created_by: PyObjectId = Field(default_factory=PyObjectId)
     created_on: datetime = Field(default_factory=datetime.now)
