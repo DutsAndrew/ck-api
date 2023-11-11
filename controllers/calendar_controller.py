@@ -48,26 +48,29 @@ async def fetch_all_user_calendar_data(request: Request, userEmail: str):
             projection={
                 'calendars': 1,
                 'pending_calendars': 1,
+                'personal_calendar': 1,
             },
         )
-        if not user:
-            return JSONResponse(
-                content={
-                    'detail': 'The account you are using does not exist'
-                },
-                status_code=404
-            )
-        else:
-            populated_calendars = await populate_all_calendars(request, user)
-            user['calendars'] = populated_calendars['calendars']
-            user['pending_calendars'] = populated_calendars['pending_calendars']
 
-            return JSONResponse(
-                content={
-                    'detail': 'All possible calendars fetched',
-                    'updated_user': user,
-                }
-            )
+        if not user:
+            return JSONResponse(content={'detail': 'The account you are using does not exist'}, status_code=404)
+       
+        populated_calendars = await populate_all_calendars(request, user)
+        user['calendars'] = populated_calendars['calendars']
+        user['pending_calendars'] = populated_calendars['pending_calendars']
+        personal_calendar = await populate_one_calendar(request, '', personal_calendar=user['personal_calendar'])
+        
+        if personal_calendar is None:
+            return JSONResponse(content={'detail': 'personal calendar could not be populated'}, status_code=422)
+        
+        user['personal_calendar'] = personal_calendar
+
+        return JSONResponse(
+            content={
+                'detail': 'All possible calendars fetched',
+                'updated_user': user,
+            }
+        )
         
     except Exception as e:
         logger.error(f"Error processing request: {e}")
@@ -400,8 +403,14 @@ def filter_out_user_from_calendar_list(user_id, calendar, type):
     return calendar
 
 
-async def populate_one_calendar(request: Request, calendar_id: str):
-    calendar = await request.app.db['calendars'].find_one({'_id': calendar_id})
+async def populate_one_calendar(request: Request, calendar_id: str, personal_calendar=None):
+    
+    calendar = None
+    
+    if calendar_id:
+        calendar = await request.app.db['calendars'].find_one({'_id': calendar_id})
+    elif personal_calendar is not None:
+        calendar = personal_calendar
     
     if calendar is None:
         return None
@@ -458,7 +467,7 @@ async def populate_one_calendar(request: Request, calendar_id: str):
     # assign populated user objects back to calendar
     calendar['authorized_users'] = authorized_users
     calendar['view_only_users'] = view_only_users
-    calendar['pending_users'] = pending_users_with_type\
+    calendar['pending_users'] = pending_users_with_type
     
     return calendar
 
