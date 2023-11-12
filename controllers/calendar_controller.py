@@ -646,3 +646,7 @@ async def user_leave_calendar_request(request, calendar_id, user_id):
     except Exception as e:
         logger.error(f"Error processing request: {e}")
         return JSONResponse(content={'detail': 'There was an issue processing your request'}, status_code=500)
+    
+
+async def post_note(request: Request, calendar_id: str, user_making_request: str):
+    return
