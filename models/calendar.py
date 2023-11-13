@@ -1,6 +1,6 @@
 from datetime import datetime
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Optional
 from models.bson_object_id import PyObjectId
 from models.event import Event
 from bson import ObjectId
@@ -12,9 +12,21 @@ from bson import ObjectId
 # color scheme set by user
 
 class CalendarNote(BaseModel):
-    id: PyObjectId = Field(default_factory=PyObjectId, alias='_id')
-    date: datetime = Field(required=True)
+    id: PyObjectId = Field(default_factory=PyObjectId, alias='_id') # ID IS NOTE FOR STORING IN DB, IT'S FOR SORTING BY UNIQUE ID IF NECESSARY
+    created_by: PyObjectId = Field(default_factory=PyObjectId)
+    created_on: datetime = Field(default_factory=datetime.now)
     note: str = Field(default_factory=str, required=True)
+    start_date: datetime = Field(default_factory=str)
+    end_date: datetime = Field(default_factory=str)
+    type: str = Field(default_factory=str, required=True)
+
+    def __init__(self, note, type, user_id, date_data, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.note = note
+        self.type = type
+        self.created_by = user_id
+
+        ## CREATE METHODS TO TAKE NOTE 'TYPE' AND 'DATE_DATA' AND CREATE DATE TIME OBJECTS FOR 'START_DATE' AND 'END_DATE'
 
     model_config = {
         "populate_by_name": True,

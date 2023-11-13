@@ -648,5 +648,10 @@ async def user_leave_calendar_request(request, calendar_id, user_id):
         return JSONResponse(content={'detail': 'There was an issue processing your request'}, status_code=500)
     
 
-async def post_note(request: Request, calendar_id: str, user_making_request: str):
-    return
+async def post_note(request: Request, calendar_id: str, note_type: str, user_making_request: str):
+    calendar = request.app.db['calendars'].find_one({'_id': calendar_id})
+
+    if calendar is None:
+        return JSONResponse(content={'detail': 'That calendar does not exist'}, status_code=404)
+
+    
