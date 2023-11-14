@@ -1,7 +1,8 @@
 from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
-from models.calendar import PendingUser, Calendar
+from models.calendar import PendingUser, Calendar, CalendarNote
 from fastapi.encoders import jsonable_encoder
+from pydantic import ValidationError
 import logging
 
 logger = logging.getLogger(__name__)
@@ -649,10 +650,48 @@ async def user_leave_calendar_request(request, calendar_id, user_id):
     
 
 async def post_note(request: Request, calendar_id: str, user_making_request: str):
-    calendar = request.app.db['calendars'].find_one({'_id': calendar_id})
+    calendar_note = await create_calendar_note_and_verify(request)
+
+    if isinstance(calendar_note, JSONResponse):
+        return calendar_note
+
+    if calendar_note is None:
+        return JSONResponse(content={'detail': 'The note you posted is not compatible'}, status_code=404)
+
+    calendar = None # if user is adding note to their personal calendar the calendar_id will be set to false
+    if calendar_id.lower() == 'false':
+        calendar_id = False
+    if calendar_id is not False:
+        calendar = await request.app.db['calendars'].find_one({'_id': calendar_id})
+    
+    user = await request.app.db['users'].find_one({'email': user_making_request}, projection={
+        'first_name': 1,
+        'last_name': 1,
+        'email': 1,
+        'job_title': 1,
+        'company': 1,
+    })
+
+    if (calendar_id is not False and calendar is None) or user is None:
+        return JSONResponse(content={'detail': 'the user or calendar you\'re working on is invalid'}, status_code=404)
+    
+    print(calendar_note.created_by)
 
     if calendar is None:
         return JSONResponse(content={'detail': 'That calendar does not exist'}, status_code=404)
     
-    form_data = await request.json()
 
+async def create_calendar_note_and_verify(request: Request):
+    try:
+        calendar_note_object = await request.json()
+        calendar_note = CalendarNote(
+            calendar_note_object['note'],
+            calendar_note_object['noteType'],
+            calendar_note_object['createdBy'],
+            calendar_note_object['dates']['startDate'],
+            calendar_note_object['dates']['endDate'],
+        )
+        return calendar_note
+    except (ValueError, TypeError, ValidationError) as e:
+        logger.error(f"Calendar note could not be created: {e}")
+        return JSONResponse(content={'detail': 'There was an error creating that calendar note'}, status_code=422)
