@@ -719,9 +719,7 @@ async def post_note(request: Request, calendar_id: str, user_making_request: str
 
     if isinstance(updated_calendar_with_note, JSONResponse):
         return updated_calendar_with_note
-    
-    print(updated_calendar_with_note)
-    
+        
     if calendar_id is False:
         return JSONResponse(content={
             'detail': 'Successfully updated calendar with note',
