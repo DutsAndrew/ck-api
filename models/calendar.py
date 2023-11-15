@@ -1,6 +1,6 @@
 from datetime import datetime
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List
 from models.bson_object_id import PyObjectId
 from models.event import Event
 from bson import ObjectId
@@ -13,22 +13,20 @@ from bson import ObjectId
 
 class CalendarNote(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias='_id') # ID IS NOTE FOR STORING IN DB, IT'S FOR SORTING BY UNIQUE ID IF NECESSARY
-    created_by: PyObjectId = Field(default_factory=PyObjectId, required=True)
+    created_by: dict = Field(default_factory=dict)
     created_on: datetime = Field(default_factory=datetime.now)
     note: str = Field(default_factory=str, required=True)
-    start_date: datetime = Field(default_factory=str, required=True)
-    end_date: datetime = Field(default_factory=str, required=True)
+    start_date: datetime = Field(default_factory=datetime.now, required=True)
+    end_date: datetime = Field(default_factory=datetime.now, required=True)
     type: str = Field(default_factory=str, required=True)
 
-    def __init__(self, note: str, type: str, user_id: str, start_date: datetime, end_date: datetime, *args, **kwargs):
+    def __init__(self, note: str, type: str, user_ref: dict, start_date: datetime, end_date: datetime, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.created_by = user_id
+        self.created_by = user_ref
         self.end_date = end_date
         self.note = note
         self.start_date = start_date
         self.type = type
-
-        ## CREATE METHODS TO TAKE NOTE 'TYPE' AND 'DATE_DATA' AND CREATE DATE TIME OBJECTS FOR 'START_DATE' AND 'END_DATE'
 
     model_config = {
         "populate_by_name": True,

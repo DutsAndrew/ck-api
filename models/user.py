@@ -7,6 +7,12 @@ from models.bson_object_id import PyObjectId
 from bson import ObjectId
 import re
 
+class UserRef(BaseModel):
+    first_name: str
+    last_name: str
+    email: str
+    job_title: str
+    company: str
 
 class UserLogin(BaseModel):
     email: str
