@@ -11,16 +11,21 @@ from bson import ObjectId
 # what year the calendar is for
 # color scheme set by user
 
+class UserRef(BaseModel):
+    first_name: str
+    last_name: str
+    user_id: str = Field(default_factory=str)
+
 class CalendarNote(BaseModel):
-    id: PyObjectId = Field(default_factory=PyObjectId, alias='_id') # ID IS NOTE FOR STORING IN DB, IT'S FOR SORTING BY UNIQUE ID IF NECESSARY
-    created_by: dict = Field(default_factory=dict)
+    id: PyObjectId = Field(default_factory=PyObjectId, alias='_id')
+    created_by: UserRef = Field(default_factory=dict)
     created_on: datetime = Field(default_factory=datetime.now)
     note: str = Field(default_factory=str, required=True)
     start_date: datetime = Field(default_factory=datetime.now, required=True)
     end_date: datetime = Field(default_factory=datetime.now, required=True)
     type: str = Field(default_factory=str, required=True)
 
-    def __init__(self, note: str, type: str, user_ref: dict, start_date: datetime, end_date: datetime, *args, **kwargs):
+    def __init__(self, note: str, type: str, user_ref: UserRef, start_date: datetime, end_date: datetime, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.created_by = user_ref
         self.end_date = end_date

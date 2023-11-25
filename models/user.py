@@ -10,9 +10,8 @@ import re
 class UserRef(BaseModel):
     first_name: str
     last_name: str
-    email: str
-    job_title: str
-    company: str
+    user_id: str = Field(default_factory=str)
+
 
 class UserLogin(BaseModel):
     email: str
