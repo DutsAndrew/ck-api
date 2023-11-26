@@ -5,16 +5,11 @@ from models.bson_object_id import PyObjectId
 from models.event import Event
 from bson import ObjectId
 
-## Calendars should have the following:
-# what team or user the calendar belongs to
-# what events have been created and added to calendar
-# what year the calendar is for
-# color scheme set by user
-
 class UserRef(BaseModel):
     first_name: str
     last_name: str
     user_id: str = Field(default_factory=str)
+
 
 class CalendarNote(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias='_id')
@@ -25,13 +20,27 @@ class CalendarNote(BaseModel):
     end_date: datetime = Field(default_factory=datetime.now, required=True)
     type: str = Field(default_factory=str, required=True)
 
-    def __init__(self, note: str, type: str, user_ref: UserRef, start_date: datetime, end_date: datetime, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.created_by = user_ref
-        self.end_date = end_date
-        self.note = note
-        self.start_date = start_date
-        self.type = type
+    def __init__(
+            self,
+            note: str,
+            type: str,
+            user_ref: UserRef,
+            start_date: datetime,
+            end_date: datetime,
+            id=None,
+            *args,
+            **kwargs
+        ):
+            super().__init__(*args, **kwargs)
+            self.created_by = user_ref
+            self.end_date = end_date
+            self.note = note
+            self.start_date = start_date
+            self.type = type
+
+            if id is not None:
+                 self.id = id
+
 
     model_config = {
         "populate_by_name": True,

@@ -815,9 +815,7 @@ async def add_note_to_calendar(
                 return updated_calendar
         except Exception as e:
             logger.error(f"Could not add note to calendar: {e}")
-            return JSONResponse(content={
-                'detail': 'There was an error adding your note to that calendar'
-            }, status_code=422)
+            return JSONResponse(content={'detail': 'There was an error adding your note to that calendar'}, status_code=422)
 
 
 async def retrieve_updated_calendar_with_new_note(request: Request, calendar_id: str, user_id: str):
@@ -844,3 +842,62 @@ async def retrieve_updated_calendar_with_new_note(request: Request, calendar_id:
                 'detail': 'Failed to retrieve updated calendar with note'
             }, status_code=422)
         return calendar_with_updated_note
+    
+
+async def update_note(request, note_id):
+    note = await request.app.db['calendar_notes'].find_one({'_id': note_id})
+    
+    if note is None:
+        return JSONResponse(content={'detail': 'That note could not be found'})
+
+    updated_note = await create_updated_note(request, note)
+
+    if isinstance(updated_note, JSONResponse):
+        return updated_note
+
+    if updated_note is None:
+      return JSONResponse(content={'detail': 'We were unable to create an updated version of that note'}, status_code=422)
+    
+    print(updated_note)
+        
+    upload_updated_note = await request.app.db['calendar_notes'].update_one(
+        {'_id': note_id},
+        {'$set': updated_note}
+    )
+
+    if upload_updated_note is None:
+        return JSONResponse(content={'detail': 'We were unable to update the previous note version'}, status_code=404)
+    
+    return JSONResponse(content={
+        'detail': 'Successfully updated the note',
+        'updated_note': updated_note,
+    }, status_code=200)
+
+
+async def create_updated_note(request: Request, note: CalendarNote):
+    try:
+        calendar_note_object = await request.json()
+
+        user_ref = UserRef(
+            first_name=note['created_by']['first_name'],
+            last_name=note['created_by']['last_name'],
+            user_id=note['created_by']['first_name']
+        )
+
+        calendar_note = CalendarNote(
+            calendar_note_object['note'],
+            calendar_note_object['noteType'],
+            user_ref,
+            datetime.fromisoformat(calendar_note_object['dates']['startDate']),
+            datetime.fromisoformat(calendar_note_object['dates']['endDate']),
+            id=note['_id'],
+        )
+
+        if calendar_note is None:
+            return JSONResponse(content={'detail': 'The note you posted is not compatible'}, status_code=404)
+        
+        return calendar_note.model_dump()
+    
+    except (ValueError, TypeError, ValidationError) as e:
+        logger.error(f"Calendar note could not be updated: {e}")
+        return JSONResponse(content={'detail': 'There was an error updating that calendar note'}, status_code=422)
