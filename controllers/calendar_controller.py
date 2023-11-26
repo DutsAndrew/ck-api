@@ -756,11 +756,11 @@ async def create_calendar_note_and_verify(request: Request, user):
         )
 
         calendar_note = CalendarNote(
-            calendar_note_object['note'],
-            calendar_note_object['noteType'],
-            user_ref,
-            datetime.fromisoformat(calendar_note_object['dates']['startDate']),
-            datetime.fromisoformat(calendar_note_object['dates']['endDate']),
+            note=calendar_note_object['note'],
+            type=calendar_note_object['noteType'],
+            user_ref=user_ref,
+            start_date=datetime.fromisoformat(calendar_note_object['dates']['startDate']),
+            end_date=datetime.fromisoformat(calendar_note_object['dates']['endDate']),
         )
 
         if calendar_note is None:
@@ -857,12 +857,10 @@ async def update_note(request, note_id):
 
     if updated_note is None:
       return JSONResponse(content={'detail': 'We were unable to create an updated version of that note'}, status_code=422)
-    
-    print(updated_note)
-        
+            
     upload_updated_note = await request.app.db['calendar_notes'].update_one(
         {'_id': note_id},
-        {'$set': updated_note}
+        {'$set': jsonable_encoder(updated_note)}
     )
 
     if upload_updated_note is None:
@@ -870,7 +868,7 @@ async def update_note(request, note_id):
     
     return JSONResponse(content={
         'detail': 'Successfully updated the note',
-        'updated_note': updated_note,
+        'updated_note': jsonable_encoder(updated_note),
     }, status_code=200)
 
 
@@ -885,18 +883,18 @@ async def create_updated_note(request: Request, note: CalendarNote):
         )
 
         calendar_note = CalendarNote(
-            calendar_note_object['note'],
-            calendar_note_object['noteType'],
-            user_ref,
-            datetime.fromisoformat(calendar_note_object['dates']['startDate']),
-            datetime.fromisoformat(calendar_note_object['dates']['endDate']),
+            note=calendar_note_object['note'],
+            type=calendar_note_object['noteType'],
+            user_ref=user_ref,
+            start_date=datetime.fromisoformat(calendar_note_object['dates']['startDate']),
+            end_date=datetime.fromisoformat(calendar_note_object['dates']['endDate']),
             id=note['_id'],
         )
 
         if calendar_note is None:
             return JSONResponse(content={'detail': 'The note you posted is not compatible'}, status_code=404)
         
-        return calendar_note.model_dump()
+        return calendar_note
     
     except (ValueError, TypeError, ValidationError) as e:
         logger.error(f"Calendar note could not be updated: {e}")

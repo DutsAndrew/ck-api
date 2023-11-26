@@ -1,9 +1,10 @@
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 from typing import List
 from models.bson_object_id import PyObjectId
 from models.event import Event
 from bson import ObjectId
+
 
 class UserRef(BaseModel):
     first_name: str
@@ -20,37 +21,30 @@ class CalendarNote(BaseModel):
     end_date: datetime = Field(default_factory=datetime.now, required=True)
     type: str = Field(default_factory=str, required=True)
 
-    def __init__(
-            self,
-            note: str,
-            type: str,
-            user_ref: UserRef,
-            start_date: datetime,
-            end_date: datetime,
-            id=None,
-            *args,
-            **kwargs
-        ):
-            super().__init__(*args, **kwargs)
-            self.created_by = user_ref
-            self.end_date = end_date
-            self.note = note
-            self.start_date = start_date
-            self.type = type
+    def __init__(self, note: str, type: str, user_ref: UserRef, start_date: datetime, end_date: datetime, id=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.created_by = user_ref
+        self.end_date = end_date
+        self.note = note
+        self.start_date = start_date
+        self.type = type
 
-            if id is not None:
-                 self.id = id
+        if id is not None:
+              self.id = id
 
+    @validator('start_date', 'end_date', pre=True, always=True)
+    def serialize_datetime(cls, v):
+        if isinstance(v, datetime):
+            return v.strftime('%Y-%m-%d %H:%M:%S')
+        return v
 
-    model_config = {
-        "populate_by_name": True,
-        "arbitrary_types_allowed": True,
-        "json_encoders": {
-            ObjectId: str,
+    class Config:
+        populate_by_name = True
+        arbitrary_types_allowed = True
+        json_encoders = {
             PyObjectId: str,
             datetime: lambda dt: dt.strftime('%Y-%m-%d %H:%M:%S')
-          },
-    }
+        }
 
 
 class PendingUser(BaseModel):
@@ -66,7 +60,7 @@ class PendingUser(BaseModel):
         "arbitrary_types_allowed": True,
         "json_encoders": {
             PyObjectId: str,
-          },
+        },
     }
     
 
