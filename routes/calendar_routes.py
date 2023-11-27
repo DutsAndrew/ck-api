@@ -50,6 +50,6 @@ async def delete_calendar(request: Request, calendar_id: str, user_id: str, toke
 async def post_calendar_note(request: Request, calendar_id: str, token: str | bool = Depends(process_bearer_token)):
      return await calendar_controller.post_note(request, calendar_id, token['email'])
 
-@calendar_router.put('/updateNote/{note_id}')
-async def update_calendar_note(request: Request, note_id: str, token: str | bool = Depends(process_bearer_token)):
-      return await calendar_controller.update_note(request, note_id)
+@calendar_router.put('/{calendar_id}/updateNote/{note_id}')
+async def update_calendar_note(request: Request, calendar_id: str, note_id: str, token: str | bool = Depends(process_bearer_token)):
+      return await calendar_controller.update_note(request, calendar_id, note_id)

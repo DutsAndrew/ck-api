@@ -682,7 +682,7 @@ async def post_note(request: Request, calendar_id: str, user_making_request: str
     )
 
     # Build out calendar_note object from user request to convert to Python calendar_note object
-    calendar_note = await create_calendar_note_and_verify(request, user)
+    calendar_note = await create_calendar_note_and_verify(request, user, calendar_id)
 
     if isinstance(calendar_note, JSONResponse):
         return calendar_note
@@ -743,7 +743,7 @@ async def post_note(request: Request, calendar_id: str, user_making_request: str
         }, status_code=200)
     
 
-async def create_calendar_note_and_verify(request: Request, user):
+async def create_calendar_note_and_verify(request: Request, user, calendar_id: str):
     try:
         calendar_note_object = await request.json()
         created_by_user = user.copy()
@@ -756,6 +756,7 @@ async def create_calendar_note_and_verify(request: Request, user):
         )
 
         calendar_note = CalendarNote(
+            calendar_id=calendar_id,
             note=calendar_note_object['note'],
             type=calendar_note_object['noteType'],
             user_ref=user_ref,
@@ -844,13 +845,13 @@ async def retrieve_updated_calendar_with_new_note(request: Request, calendar_id:
         return calendar_with_updated_note
     
 
-async def update_note(request, note_id):
+async def update_note(request: Request, calendar_id: str, note_id: str):
     note = await request.app.db['calendar_notes'].find_one({'_id': note_id})
     
     if note is None:
         return JSONResponse(content={'detail': 'That note could not be found'})
 
-    updated_note = await create_updated_note(request, note)
+    updated_note = await create_updated_note(request, note, calendar_id)
 
     if isinstance(updated_note, JSONResponse):
         return updated_note
@@ -872,17 +873,18 @@ async def update_note(request, note_id):
     }, status_code=200)
 
 
-async def create_updated_note(request: Request, note: CalendarNote):
+async def create_updated_note(request: Request, note: CalendarNote, calendar_id: str):
     try:
         calendar_note_object = await request.json()
 
         user_ref = UserRef(
             first_name=note['created_by']['first_name'],
             last_name=note['created_by']['last_name'],
-            user_id=note['created_by']['first_name']
+            user_id=note['created_by']['user_id'],
         )
 
         calendar_note = CalendarNote(
+            calendar_id=calendar_id,
             note=calendar_note_object['note'],
             type=calendar_note_object['noteType'],
             user_ref=user_ref,
