@@ -670,7 +670,8 @@ async def user_leave_calendar_request(request, calendar_id, user_id):
         return JSONResponse(content={'detail': 'There was an issue processing your request'}, status_code=500)
     
 
-async def post_note(request: Request, calendar_id: str, user_making_request: str):
+async def post_note(request: Request, calendar_id: str, user_making_request: str, is_personal_calendar: bool):
+    # NOTE::: calendar_id will be 'personal_calendar: calendar_id' if the note is being added to a personal calendar
     # Retrieve user to add as the creator of the note and to access personal calendar if needed
     user = await request.app.db['users'].find_one(
         {'email': user_making_request}, 
@@ -681,41 +682,39 @@ async def post_note(request: Request, calendar_id: str, user_making_request: str
         },
     )
 
-    # Build out calendar_note object from user request to convert to Python calendar_note object
-    calendar_note = await create_calendar_note_and_verify(request, user, calendar_id)
+    calendar_note = await create_calendar_note_and_verify(request, user, calendar_id, is_personal_calendar)
 
     if isinstance(calendar_note, JSONResponse):
         return calendar_note
 
     # Check if user is adding note to a personal calendar or team calendar
-    calendar = None # if user is adding note to their personal calendar the calendar_id will be set to false
-    if calendar_id.lower() == 'false': # javascript false will transpose to a string when sent in, so check for it and set it to False
-        calendar_id = False
-    if calendar_id is not False:
+    calendar = None
+
+    if is_personal_calendar is False:
         calendar = await request.app.db['calendars'].find_one({'_id': calendar_id})
 
-    if (calendar_id is not False and calendar is None) or user is None:
+    if (is_personal_calendar is False and calendar is None) or user is None:
         return JSONResponse(content={
             'detail': 'the user or calendar you\'re working on is invalid'
         }, status_code=404)
         
     # Send calendar_note in with data to add it to the correct calendar
     update_calendar_with_note = None
-    if calendar_id is False:
+    if is_personal_calendar is True:
         update_calendar_with_note = await add_note_to_calendar(
             request,
             user['personal_calendar'],
             calendar_note['_id'],
-            user,
-            personal_calendar=True
+            user, # send in user object to add note ref to personal calendar on user obj
+            is_personal_calendar,
         )
     else:
         update_calendar_with_note = await add_note_to_calendar(
             request,
             calendar,
             calendar_note['_id'],
-            '',
-            personal_calendar=False
+            '', # empty user as note id will be stored on calendar obj
+            is_personal_calendar
         )
 
     if isinstance(update_calendar_with_note, JSONResponse):
@@ -725,13 +724,14 @@ async def post_note(request: Request, calendar_id: str, user_making_request: str
     updated_calendar_with_note = await retrieve_updated_calendar_with_new_note(
         request,
         calendar_id,
+        is_personal_calendar,
         user['_id']
     )
 
     if isinstance(updated_calendar_with_note, JSONResponse):
         return updated_calendar_with_note
         
-    if calendar_id is False:
+    if is_personal_calendar is True:
         return JSONResponse(content={
             'detail': 'Successfully updated calendar with note',
             'personal_calendar': updated_calendar_with_note,
@@ -743,7 +743,7 @@ async def post_note(request: Request, calendar_id: str, user_making_request: str
         }, status_code=200)
     
 
-async def create_calendar_note_and_verify(request: Request, user, calendar_id: str):
+async def create_calendar_note_and_verify(request: Request, user, calendar_id: str, is_personal_calendar: bool):
     try:
         calendar_note_object = await request.json()
         created_by_user = user.copy()
@@ -762,6 +762,7 @@ async def create_calendar_note_and_verify(request: Request, user, calendar_id: s
             user_ref=user_ref,
             start_date=datetime.fromisoformat(calendar_note_object['dates']['startDate']),
             end_date=datetime.fromisoformat(calendar_note_object['dates']['endDate']),
+            personal_calendar=is_personal_calendar,
         )
 
         if calendar_note is None:
@@ -791,10 +792,10 @@ async def add_note_to_calendar(
         calendar: Calendar,
         calendar_note_id: CalendarNote,
         user_for_personal_calendar: object,
-        personal_calendar=False
+        is_personal_calendar: bool,
     ):
         try:
-            if personal_calendar is False:
+            if is_personal_calendar is False:
                 updated_calendar = await request.app.db['calendars'].update_one(
                     {'_id': calendar['_id']},
                     {'$push': {'calendar_notes': calendar_note_id}}
@@ -819,8 +820,8 @@ async def add_note_to_calendar(
             return JSONResponse(content={'detail': 'There was an error adding your note to that calendar'}, status_code=422)
 
 
-async def retrieve_updated_calendar_with_new_note(request: Request, calendar_id: str, user_id: str):
-    if calendar_id is False: # retrieving updated personal calendar off of user object
+async def retrieve_updated_calendar_with_new_note(request: Request, calendar_id: str, is_personal_calendar: bool, user_id: str):
+    if is_personal_calendar is True: # retrieving updated personal calendar off of user object
         users_personal_calendar = await request.app.db['users'].find_one(
             {'_id': user_id},
             projection={
@@ -845,13 +846,14 @@ async def retrieve_updated_calendar_with_new_note(request: Request, calendar_id:
         return calendar_with_updated_note
     
 
-async def update_note(request: Request, calendar_id: str, note_id: str):
+async def update_note(request: Request, calendar_id: str, note_id: str, is_personal_calendar: bool):
+    # NOTE::: calendar_id will be 'personal_calendar: calendar_id' if the note is being added to a personal calendar
     note = await request.app.db['calendar_notes'].find_one({'_id': note_id})
     
     if note is None:
         return JSONResponse(content={'detail': 'That note could not be found'})
 
-    updated_note = await create_updated_note(request, note, calendar_id)
+    updated_note = await create_updated_note(request, note, calendar_id, is_personal_calendar)
 
     if isinstance(updated_note, JSONResponse):
         return updated_note
@@ -873,7 +875,7 @@ async def update_note(request: Request, calendar_id: str, note_id: str):
     }, status_code=200)
 
 
-async def create_updated_note(request: Request, note: CalendarNote, calendar_id: str):
+async def create_updated_note(request: Request, note: CalendarNote, calendar_id: str, is_personal_calendar: bool):
     try:
         calendar_note_object = await request.json()
 
@@ -890,6 +892,7 @@ async def create_updated_note(request: Request, note: CalendarNote, calendar_id:
             user_ref=user_ref,
             start_date=datetime.fromisoformat(calendar_note_object['dates']['startDate']),
             end_date=datetime.fromisoformat(calendar_note_object['dates']['endDate']),
+            personal_calendar=is_personal_calendar,
             id=note['_id'],
         )
 
