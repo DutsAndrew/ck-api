@@ -99,6 +99,8 @@ async def populate_all_calendars(request, user):
 
 
 async def populate_individual_calendars(request: Request, calendar_ids: list[str]):
+    if len(calendar_ids) == 0: return []
+
     calendars = []
 
     authorized_user_ids = set()
@@ -147,7 +149,6 @@ async def populate_individual_calendars(request: Request, calendar_ids: list[str
     # CREATE DICT WITH USER REF TIED TO USER INSTANCE
     calendar_authorized_users_dict = {str(user['_id']): user for user in authorized_users}
     calendar_view_only_users_dict = {str(user['_id']): user for user in view_only_users}
-    calendar_notes_dict = {str(calendar_note['_id']): calendar_note for calendar_note in calendar_notes}
 
     # LOOP THROUGH CALENDARS TO STORE USER INSTANCES IN EACH CALENDAR
     for calendar in calendars:
@@ -183,7 +184,7 @@ async def populate_individual_calendars(request: Request, calendar_ids: list[str
         calendar['view_only_users'] = [
             calendar_view_only_users_dict.get(str(user_id)) for user_id in view_only_user_ids
         ]
-        calendar['calendar_notes'] = calendar_notes_dict.get(str(calendar_id) for calendar_id in calendar_note_ids)
+        calendar['calendar_notes'] = calendar_notes
 
     return calendars
 
