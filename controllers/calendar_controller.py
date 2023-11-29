@@ -672,8 +672,11 @@ async def user_leave_calendar_request(request, calendar_id, user_id):
     
 
 async def post_note(request: Request, calendar_id: str, user_making_request: str, is_personal_calendar: bool):
-    # NOTE::: calendar_id will be 'personal_calendar: calendar_id' if the note is being added to a personal calendar
-    # Retrieve user to add as the creator of the note and to access personal calendar if needed
+    permissions = verify_user_has_calendar_authorization(request, user_making_request, calendar_id)
+
+    if permissions is False or isinstance(permissions, JSONResponse):
+        return JSONResponse(content={'detail': 'We could not validate permissions'}, status_code=404)
+
     user = await request.app.db['users'].find_one(
         {'email': user_making_request}, 
         projection={
@@ -744,6 +747,28 @@ async def post_note(request: Request, calendar_id: str, user_making_request: str
         }, status_code=200)
     
 
+async def verify_user_has_calendar_authorization(request: Request, user_email: str, calendar_id: str):
+    try:
+        user = await request.app.db['users'].find_one(
+            {'email': user_email}
+        )
+        calendar = await request.app.db['calendars'].find_one(
+            {'_id': calendar_id},
+            projection={'authorized_users': 1}
+        )
+
+        if user is None or calendar is None:
+            return JSONResponse(content={'detail': 'Failed to verify user or calendar being accessed'}, status_code=404)
+
+        if user['_id'] in calendar['authorized_users']:
+            return True
+        else:
+            return False
+    except Exception as e:
+        logger.error(f"Calendar note could not be created: {e}")
+        return JSONResponse(content={'detail': 'There was an error creating that calendar note'}, status_code=422)
+    
+
 async def create_calendar_note_and_verify(request: Request, user, calendar_id: str, is_personal_calendar: bool):
     try:
         calendar_note_object = await request.json()
@@ -783,9 +808,7 @@ async def create_calendar_note_and_verify(request: Request, user, calendar_id: s
     
     except (ValueError, TypeError, ValidationError) as e:
         logger.error(f"Calendar note could not be created: {e}")
-        return JSONResponse(content={
-            'detail': 'There was an error creating that calendar note'
-        }, status_code=422)
+        return JSONResponse(content={'detail': 'There was an error creating that calendar note'}, status_code=422)
     
 
 async def add_note_to_calendar(
@@ -848,7 +871,11 @@ async def retrieve_updated_calendar_with_new_note(request: Request, calendar_id:
     
 
 async def update_note(request: Request, calendar_id: str, note_id: str, is_personal_calendar: bool, user_making_request_email: str):
-    # NOTE::: calendar_id will be 'personal_calendar: calendar_id' if the note is being added to a personal calendar
+    permissions = verify_user_has_calendar_authorization(request, user_making_request_email, calendar_id)
+
+    if permissions is False or isinstance(permissions, JSONResponse):
+        return JSONResponse(content={'detail': 'We could not validate permissions'}, status_code=404)
+
     note = await request.app.db['calendar_notes'].find_one({'_id': note_id})
     
     if note is None:
