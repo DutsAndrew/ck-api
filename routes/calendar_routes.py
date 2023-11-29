@@ -80,4 +80,4 @@ async def update_calendar_note(
              is_personal_calendar = False
         else:
              is_personal_calendar = True
-        return await calendar_controller.update_note(request, calendar_id, note_id, is_personal_calendar)
+        return await calendar_controller.update_note(request, calendar_id, note_id, is_personal_calendar, token['email'])
