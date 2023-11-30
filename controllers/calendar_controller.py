@@ -672,10 +672,10 @@ async def user_leave_calendar_request(request, calendar_id, user_id):
     
 
 async def post_note(request: Request, calendar_id: str, user_making_request: str, is_personal_calendar: bool):
-    permissions = verify_user_has_calendar_authorization(request, user_making_request, calendar_id)
-
-    if permissions is False or isinstance(permissions, JSONResponse):
-        return JSONResponse(content={'detail': 'We could not validate permissions'}, status_code=404)
+    if is_personal_calendar is False:
+        permissions = await verify_user_has_calendar_authorization(request, user_making_request, calendar_id)
+        if permissions is False or isinstance(permissions, JSONResponse):
+            return JSONResponse(content={'detail': 'We could not validate permissions'}, status_code=404)
 
     user = await request.app.db['users'].find_one(
         {'email': user_making_request}, 
@@ -750,7 +750,8 @@ async def post_note(request: Request, calendar_id: str, user_making_request: str
 async def verify_user_has_calendar_authorization(request: Request, user_email: str, calendar_id: str):
     try:
         user = await request.app.db['users'].find_one(
-            {'email': user_email}
+            {'email': user_email},
+            projection={'_id': 1}
         )
         calendar = await request.app.db['calendars'].find_one(
             {'_id': calendar_id},
@@ -871,10 +872,10 @@ async def retrieve_updated_calendar_with_new_note(request: Request, calendar_id:
     
 
 async def update_note(request: Request, calendar_id: str, note_id: str, is_personal_calendar: bool, user_making_request_email: str):
-    permissions = verify_user_has_calendar_authorization(request, user_making_request_email, calendar_id)
-
-    if permissions is False or isinstance(permissions, JSONResponse):
-        return JSONResponse(content={'detail': 'We could not validate permissions'}, status_code=404)
+    if is_personal_calendar is False:
+        permissions = await verify_user_has_calendar_authorization(request, user_making_request_email, calendar_id)
+        if permissions is False or isinstance(permissions, JSONResponse):
+            return JSONResponse(content={'detail': 'We could not validate permissions'}, status_code=404)
 
     note = await request.app.db['calendar_notes'].find_one({'_id': note_id})
     
@@ -959,13 +960,14 @@ async def create_updated_note(request: Request, note: CalendarNote, calendar_id:
 async def remove_note_from_previous_calendar(
         request: Request,
         note: CalendarNote,
-        requested_calendar_for_note: str,
+        calendar_id: str,
         is_personal_calendar: bool,
         user_making_request_email: str,
     ):
         try:
-            if note['calendar_id'] is not requested_calendar_for_note:
+            if note['calendar_id'] is not calendar_id:
                 if is_personal_calendar is False:
+                    print('attempting to remove calendar note')
                     remove_note_from_calendar = await request.app.db['calendars'].update_one(
                         {'_id': note['calendar_id']},
                         {'$pull': {'calendar_notes': note['_id']}}
@@ -975,6 +977,7 @@ async def remove_note_from_previous_calendar(
                     else:
                         return
                 else:
+                    print('attempting to remove personal note')
                     # calendar note is in personal calendar, fetch user to remove
                     user = await request.app.db['users'].update_one(
                         {'email': user_making_request_email},
