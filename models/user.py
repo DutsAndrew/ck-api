@@ -97,7 +97,7 @@ class User(BaseModel):
            raise ValidationError("Your password must have at least 2 numbers and 1 symbol")
         return v
     
-    @field_validator('job_title', mode='after')
+    @field_validator('job_title')
     @classmethod
     def validate_job_title(cls, v):
         if v is not None and len(v) > 1:
@@ -107,7 +107,7 @@ class User(BaseModel):
                 raise ValidationError("Your job title must be in alpha characters, FYI this field is not required and can be left blank")
         return v
         
-    @field_validator('company', mode='after')
+    @field_validator('company')
     @classmethod
     def validate_company(cls, v):
         if v is not None and len(v) > 1:

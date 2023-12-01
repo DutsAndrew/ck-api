@@ -18,7 +18,6 @@ class CalendarNote(BaseModel):
     created_by: UserRef = Field(default_factory=dict)
     created_on: datetime = Field(default_factory=datetime.now)
     note: str = Field(default_factory=str, required=True)
-    personal_calendar: bool = False
     start_date: datetime = Field(default_factory=datetime.now, required=True)
     end_date: datetime = Field(default_factory=datetime.now, required=True)
     type: str = Field(default_factory=str, required=True)
@@ -31,7 +30,6 @@ class CalendarNote(BaseModel):
             user_ref: UserRef,
             start_date: datetime,
             end_date: datetime,
-            personal_calendar: bool,
             id=None,
             *args,
             **kwargs
@@ -41,7 +39,6 @@ class CalendarNote(BaseModel):
             self.created_by = user_ref
             self.end_date = end_date
             self.note = note
-            self.personal_calendar = personal_calendar
             self.start_date = start_date
             self.type = type
 

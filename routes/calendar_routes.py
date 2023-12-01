@@ -54,31 +54,20 @@ async def delete_calendar(request: Request, calendar_id: str, user_id: str, toke
      return await calendar_controller.delete_calendar(request, calendar_id, user_id)
 
 
-@calendar_router.post('/{calendar_id}/addNote/{is_personal_calendar}')
+@calendar_router.post('/{calendar_id}/addNote')
 async def post_calendar_note(
         request: Request,
         calendar_id: str,
-        is_personal_calendar: str,
         token: str | bool = Depends(process_bearer_token)
      ):
-        if is_personal_calendar.lower() == 'false':
-             is_personal_calendar = False
-        else:
-             is_personal_calendar = True
-        return await calendar_controller.post_note(request, calendar_id, token['email'], is_personal_calendar)
+        return await calendar_controller.post_note(request, calendar_id, token['email'])
 
 
-@calendar_router.put('/{calendar_id}/updateNote/{note_id}/{is_personal_calendar}')
+@calendar_router.put('/{calendar_id}/updateNote/{note_id}')
 async def update_calendar_note(
         request: Request,
         calendar_id: str,
         note_id: str,
-        is_personal_calendar: str,
         token: str | bool = Depends(process_bearer_token)
     ):
-        is_personal_calendar_converted = False
-        if is_personal_calendar.lower() == 'false':
-             is_personal_calendar_converted = False
-        else:
-             is_personal_calendar_converted = True
-        return await calendar_controller.update_note(request, calendar_id, note_id, is_personal_calendar_converted, token['email'])
+        return await calendar_controller.update_note(request, calendar_id, note_id, token['email'])

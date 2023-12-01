@@ -15,30 +15,9 @@ async def sign_up(request: Request, user: User):
         if user_lookup is not None:
             return JSONResponse(content={'detail': 'Email already registered'}, status_code=400)
         else:
-            # no errors on form, email is not already registered and has been checked, continue sanitizing
-            # hash password
-            password_in_bytes = user.password.encode("utf-8")
-            salt = bcrypt.gensalt()
-            hash = bcrypt.hashpw(password_in_bytes, salt)
+            encoded_user = await finish_user_setup(request, user)
 
-            # store hashed password
-            user.password = hash
-
-            # build personal calendar
-            calendar = await build_personal_calendar_for_new_user(request, user)
-
-            if isinstance(calendar, JSONResponse):
-                return calendar
-            
-            # assign calendar id to user
-            user.personal_calendar = calendar
-
-            print(user)
-
-            # convert user object into a dictionary
-            user_data = jsonable_encoder(user)
-
-            upload_user = await request.app.db["users"].insert_one(user_data)
+            upload_user = await request.app.db["users"].insert_one(encoded_user)
 
             if upload_user is None:
                 return JSONResponse(content={'detail': 'Failed to save user'}, status_code=500)   
@@ -57,6 +36,31 @@ async def sign_up(request: Request, user: User):
             }
     except Exception as e:
         return JSONResponse(content={'detail': f'Server side error, which was: {e}'}, status_code=500)
+    
+
+async def finish_user_setup(request: Request, user: User):
+    # no errors on form, email is not already registered and has been checked, continue sanitizing
+    # hash password
+    password_in_bytes = user.password.encode("utf-8")
+    salt = bcrypt.gensalt()
+    hash = bcrypt.hashpw(password_in_bytes, salt)
+
+    # store hashed password
+    user.password = hash
+
+    # build personal calendar
+    calendar = await build_personal_calendar_for_new_user(request, user)
+
+    if isinstance(calendar, JSONResponse):
+        return calendar
+    
+    # assign calendar id to user
+    user.personal_calendar = calendar
+
+    # convert user object into a dictionary
+    user_data = jsonable_encoder(user)
+
+    return user_data
     
 
 async def build_personal_calendar_for_new_user(request: Request, user: User):
