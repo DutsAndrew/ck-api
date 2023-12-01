@@ -3,6 +3,7 @@ from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from scripts.jwt_token_encoders import encode_bearer_token, encode_refresh_token
+from models.calendar import Calendar
 import bcrypt
 
 async def sign_up(request: Request, user: User):
@@ -23,27 +24,50 @@ async def sign_up(request: Request, user: User):
             # store hashed password
             user.password = hash
 
+            # build personal calendar
+            calendar = await build_personal_calendar_for_new_user(request, user)
+
+            if isinstance(calendar, JSONResponse):
+                return calendar
+            
+            # assign calendar id to user
+            user.personal_calendar = calendar
+
+            print(user)
+
             # convert user object into a dictionary
             user_data = jsonable_encoder(user)
 
             upload_user = await request.app.db["users"].insert_one(user_data)
-            if upload_user:
-                user_data_stripped = {
-                    "email": user.email,
-                    "first_name": user.first_name,
-                    "last_name": user.last_name,
-                    "job_title": user.job_title if hasattr(user, 'job_title') else None,
-                    "company": user.company if hasattr(user, 'company') else None,
-                }
-                return {
-                    "message": "Success, we created your account",
-                    "success": True,
-                    "user": user_data_stripped,
-                }
-            else:
+
+            if upload_user is None:
                 return JSONResponse(content={'detail': 'Failed to save user'}, status_code=500)   
+            
+            user_data_stripped = {
+                "email": user.email,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "job_title": user.job_title if hasattr(user, 'job_title') else None,
+                "company": user.company if hasattr(user, 'company') else None,
+            }
+            return {
+                "message": "Success, we created your account",
+                "success": True,
+                "user": user_data_stripped,
+            }
     except Exception as e:
         return JSONResponse(content={'detail': f'Server side error, which was: {e}'}, status_code=500)
+    
+
+async def build_personal_calendar_for_new_user(request: Request, user: User):
+    new_calendar = Calendar(calendar_type="personal", name=f"{user.first_name}'s Personal Calendar", user_id=user.id)
+    print(new_calendar)
+    calendar_upload = await request.app.db['calendars'].insert_one(jsonable_encoder(new_calendar))
+    print(calendar_upload)
+    if calendar_upload is not None:
+        return new_calendar.id
+    else:
+        return JSONResponse(content={'detail': 'Failed to create personal calendar'}, status_code=422)
     
     
 async def user_login(request: Request, user_login: UserLogin):

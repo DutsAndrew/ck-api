@@ -76,8 +76,9 @@ async def update_calendar_note(
         is_personal_calendar: str,
         token: str | bool = Depends(process_bearer_token)
     ):
+        is_personal_calendar_converted = False
         if is_personal_calendar.lower() == 'false':
-             is_personal_calendar = False
+             is_personal_calendar_converted = False
         else:
-             is_personal_calendar = True
-        return await calendar_controller.update_note(request, calendar_id, note_id, is_personal_calendar, token['email'])
+             is_personal_calendar_converted = True
+        return await calendar_controller.update_note(request, calendar_id, note_id, is_personal_calendar_converted, token['email'])

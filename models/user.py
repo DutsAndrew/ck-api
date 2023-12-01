@@ -39,7 +39,7 @@ class User(BaseModel):
     pending_chats: List[PyObjectId] = Field(default_factory=list)
     pending_tasks: List[PyObjectId] = Field(default_factory=list)
     pending_teams: List[PyObjectId] = Field(default_factory=list)
-    personal_calendar: object = Field(default_factory=object)
+    personal_calendar: PyObjectId = Field(default_factory=PyObjectId)
     tasks: List[PyObjectId] = Field(default_factory=list)
     teams: List[PyObjectId] = Field(default_factory=list)
     total_completed_projects: int = Field(default_factory=int)
@@ -50,10 +50,6 @@ class User(BaseModel):
     yearly_completed_projects: int = Field(default_factory=int)
     yearly_completed_tasks: int = Field(default_factory=int)
     yearly_completed_subtasks: int = Field(default_factory=int)
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.personal_calendar = Calendar(calendar_type="personal", name=f"{self.first_name}'s Personal Calendar", user_id=self.id)
 
     @field_validator('email')
     @classmethod
@@ -104,7 +100,7 @@ class User(BaseModel):
     @field_validator('job_title', mode='after')
     @classmethod
     def validate_job_title(cls, v):
-        if v is not None:
+        if v is not None and len(v) > 1:
             if len(v) > 50:
                 raise ValidationError("Your job title must be no more than 50 characters, FYI this field is not required and can be left blank")
             if not re.match(r'^[A-Za-z \-\'\.]+$', v):
@@ -114,7 +110,7 @@ class User(BaseModel):
     @field_validator('company', mode='after')
     @classmethod
     def validate_company(cls, v):
-        if v is not None:
+        if v is not None and len(v) > 1:
             if len(v) > 50:
                 raise ValidationError("Your company name must be no more than 50 characters, FYI this field is not required and can be left blank")         
             if not re.match(r'^[A-Za-z \-\'\.]+$', v):

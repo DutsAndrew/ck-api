@@ -881,7 +881,7 @@ async def update_note(request: Request, calendar_id: str, note_id: str, is_perso
     
     if note is None:
         return JSONResponse(content={'detail': 'That note could not be found'})
-
+    
     updated_note = await create_updated_note(request, note, calendar_id, is_personal_calendar)
 
     if isinstance(updated_note, JSONResponse):
@@ -889,7 +889,7 @@ async def update_note(request: Request, calendar_id: str, note_id: str, is_perso
 
     if updated_note is None:
       return JSONResponse(content={'detail': 'We were unable to create an updated version of that note'}, status_code=422)
-    
+        
     remove_note_from_calendar = await remove_note_from_previous_calendar(
         request,
         note,
@@ -904,7 +904,7 @@ async def update_note(request: Request, calendar_id: str, note_id: str, is_perso
     add_note_to_calendar = await add_note_to_calendar_on_update(
         request,
         calendar_id,
-        note_id,
+        note['_id'],
         is_personal_calendar,
         user_making_request_email,
     )
@@ -965,9 +965,9 @@ async def remove_note_from_previous_calendar(
         user_making_request_email: str,
     ):
         try:
+            print(note)
             if note['calendar_id'] is not calendar_id:
-                if is_personal_calendar is False:
-                    print('attempting to remove calendar note')
+                if note['personal_calendar'] is False:
                     remove_note_from_calendar = await request.app.db['calendars'].update_one(
                         {'_id': note['calendar_id']},
                         {'$pull': {'calendar_notes': note['_id']}}
@@ -977,13 +977,12 @@ async def remove_note_from_previous_calendar(
                     else:
                         return
                 else:
-                    print('attempting to remove personal note')
                     # calendar note is in personal calendar, fetch user to remove
                     user = await request.app.db['users'].update_one(
                         {'email': user_making_request_email},
                         {'$pull': {'personal_calendar.calendar_notes': note['_id']}}
                     )
-
+                    print(user, note['_id'], user_making_request_email)
                     if user is None:
                         return JSONResponse(content={'detail': 'We failed to remove the note from that calendar'}, status_code=422)
                     else: return
