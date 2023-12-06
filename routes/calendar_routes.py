@@ -71,3 +71,8 @@ async def update_calendar_note(
         token: str | bool = Depends(process_bearer_token)
     ):
         return await calendar_controller.update_note(request, calendar_id, note_id, token['email'])
+
+
+@calendar_router.delete('/{calendar_id}/deleteNote/{calendar_note_id}')
+async def delete_calendar_note(request: Request, calendar_id: str, calendar_note_id: str):
+     return await calendar_controller.delete_note(request, calendar_id, calendar_note_id)

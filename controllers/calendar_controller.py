@@ -939,3 +939,42 @@ async def add_note_to_calendar_on_update(
             return JSONResponse(content={'detail': 'There was an error adding the note to it\'s new calendar'}, status_code=422)
         
 
+async def delete_note(request: Request, calendar_id: str, calendar_note_id: str):
+    calendar, note = await fetch_calendar_and_note(request, calendar_id, calendar_note_id)
+
+    if isinstance(calendar, JSONResponse) or isinstance(note, JSONResponse):
+        return calendar or note
+    
+    note_removal_status = await remove_calendar_note_from_db(request, calendar_id, calendar_note_id)
+
+    if isinstance(note_removal_status, JSONResponse):
+        return note_removal_status
+    
+    return JSONResponse(content={'detail': 'Success! Calendar was updated, note was removed'},status_code=200)
+
+
+async def fetch_calendar_and_note(request: Request, calendar_id: str, calendar_note_id: str):
+    calendar = await request.app.db['calendars'].find_one({'_id': calendar_id}, projection={})
+    note = await request.app.db['calendar_notes'].find_one({'_id': calendar_note_id}, projection={})
+
+    if calendar is None or note is None:
+        return JSONResponse(content={'detail': 'failed to retrieve calendar or calendar note'}, status_code=404)
+    
+    return calendar, note
+
+
+async def remove_calendar_note_from_db(request: Request, calendar_id: str, calendar_note_id: str):
+    remove_calendar_note_ref = await request.app.db['calendars'].update_one(
+        {'_id': calendar_id},
+        {'$pull': {'calendar_notes': calendar_note_id}}
+    )
+
+    if remove_calendar_note_ref is None:
+        return JSONResponse(content={'detail': 'could not remove calendar note from calendar'}, status_code=422)
+
+    remove_calendar_note = await request.app.db['calendar_notes'].delete_one({'_id': calendar_note_id})
+
+    if remove_calendar_note is None:
+        return JSONResponse(content={'detail': 'we failed to remove that calendar note'}, status_code=422)
+    
+    return remove_calendar_note
