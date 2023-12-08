@@ -1,6 +1,6 @@
 from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
-from models.calendar import PendingUser, Calendar, CalendarNote
+from models.calendar import PendingUser, Calendar, CalendarNote, Event
 from models.user import UserRef
 from fastapi.encoders import jsonable_encoder
 from pydantic import ValidationError
@@ -978,3 +978,7 @@ async def remove_calendar_note_from_db(request: Request, calendar_id: str, calen
         return JSONResponse(content={'detail': 'we failed to remove that calendar note'}, status_code=422)
     
     return remove_calendar_note
+
+
+async def post_event(request: Request, calendar_id: str):
+    return

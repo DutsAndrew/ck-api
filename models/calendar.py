@@ -1,8 +1,7 @@
 from datetime import datetime
 from pydantic import BaseModel, Field, validator
-from typing import List
+from typing import List, Optional
 from models.bson_object_id import PyObjectId
-from models.event import Event
 from bson import ObjectId
 
 
@@ -10,6 +9,25 @@ class UserRef(BaseModel):
     first_name: str
     last_name: str
     user_id: str = Field(default_factory=str)
+
+
+class Event(BaseModel):
+    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    calendar: str = Field(default_factory=str, required=True)
+    created_by: UserRef = Field(default_factory=dict)
+    event_date_and_time: datetime = Field(default_factory=datetime.now, required=True)
+    event_description: Optional[str] = Field(default_factory=str)
+    event_name: str = Field(default_factory=str, required=True)
+    pattern: str = Field(default_factory=str)
+    repeats: Optional[bool] = Field(default_factory=False)
+
+    class Config:
+        populate_by_name = True
+        arbitrary_types_allowed = True
+        json_encoders = {
+            PyObjectId: str,
+            datetime: lambda dt: dt.strftime('%Y-%m-%d %H:%M:%S')
+        }
 
 
 class CalendarNote(BaseModel):

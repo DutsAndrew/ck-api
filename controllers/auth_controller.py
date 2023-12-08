@@ -65,9 +65,8 @@ async def finish_user_setup(request: Request, user: User):
 
 async def build_personal_calendar_for_new_user(request: Request, user: User):
     new_calendar = Calendar(calendar_type="personal", name=f"{user.first_name}'s Personal Calendar", user_id=user.id)
-    print(new_calendar)
     calendar_upload = await request.app.db['calendars'].insert_one(jsonable_encoder(new_calendar))
-    print(calendar_upload)
+    
     if calendar_upload is not None:
         return new_calendar.id
     else:

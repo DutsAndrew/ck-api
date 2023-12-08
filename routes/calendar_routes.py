@@ -50,8 +50,13 @@ async def post_new_user(
 
 
 @calendar_router.delete('/{calendar_id}/deleteCalendar/{user_id}')
-async def delete_calendar(request: Request, calendar_id: str, user_id: str, token: str | bool = Depends(process_bearer_token)):
-     return await calendar_controller.delete_calendar(request, calendar_id, user_id)
+async def delete_calendar(
+        request: Request, 
+        calendar_id: str, 
+        user_id: str, 
+        token: str | bool = Depends(process_bearer_token)
+    ):
+        return await calendar_controller.delete_calendar(request, calendar_id, user_id)
 
 
 @calendar_router.post('/{calendar_id}/addNote')
@@ -74,5 +79,19 @@ async def update_calendar_note(
 
 
 @calendar_router.delete('/{calendar_id}/deleteNote/{calendar_note_id}')
-async def delete_calendar_note(request: Request, calendar_id: str, calendar_note_id: str):
-     return await calendar_controller.delete_note(request, calendar_id, calendar_note_id)
+async def delete_calendar_note(
+        request: Request, 
+        calendar_id: str, 
+        calendar_note_id: str, 
+        token: str | bool = Depends(process_bearer_token)
+    ):
+        return await calendar_controller.delete_note(request, calendar_id, calendar_note_id)
+
+
+@calendar_router.post('/{calendar_id}/createEvent')
+async def post_event(
+        request: Request, 
+        calendar_id: str,
+        token: str | bool = Depends(process_bearer_token),
+    ):
+        return await calendar_controller.post_event(request, calendar_id)
