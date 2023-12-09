@@ -980,5 +980,54 @@ async def remove_calendar_note_from_db(request: Request, calendar_id: str, calen
     return remove_calendar_note
 
 
-async def post_event(request: Request, calendar_id: str):
+async def post_event(request: Request, calendar_id: str, user_making_request_email):
+    user_ref = await build_user_reference(request, user_making_request_email)
+
+    if isinstance(user_ref, JSONResponse):
+        return user_ref
+    
+    request_body = await request.json()
+    
+    new_event = create_event_instance(request_body, calendar_id, user_ref)
+
+    upload_event = await upload_new_event(request, calendar_id, new_event)
+
+    return
+
+
+async def build_user_reference(request: Request, user_making_request_email: str):
+    user_ref = await request.app.db['users'].find_one(
+        {'email': user_making_request_email},
+        projection={
+            "first_name": 1,
+            "last_name": 1,
+            "_id": 1,
+        }
+    )
+
+    if user_ref is None:
+        return JSONResponse(content={'detail': 'the user making the request is not valid'}, status_code=422)
+    
+    return user_ref
+
+
+def create_event_instance(request_body: dict, calendar_id: str, user_ref: UserRef):
+    new_calendar = Event(
+        calendar_id=calendar_id,
+        created_by=user_ref,
+        event_date=datetime.strptime(request_body['date'], '%Y-%m-%d') if request_body['date'] else None,
+        event_description=request_body['eventDescription'] if request_body['eventDescription'] else '',
+        event_name=request_body['eventName'] if request_body['eventName'] else '',
+        event_time=request_body['selectedTime'] if request_body['selectedTime'] else None,
+        repeat_option=request_body['repeatOption'] if request_body['repeatOption'] else '',
+        repeats=request_body['repeat'] if request_body['repeat'] else False,
+    )
+
+    if new_calendar is None:
+        return JSONResponse(content={'detail': 'we could not create your calendar event'}, status_code=422)
+
+    return new_calendar
+
+
+async def upload_new_event(request, calendar_id, new_event):
     return

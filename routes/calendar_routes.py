@@ -94,4 +94,4 @@ async def post_event(
         calendar_id: str,
         token: str | bool = Depends(process_bearer_token),
     ):
-        return await calendar_controller.post_event(request, calendar_id)
+        return await calendar_controller.post_event(request, calendar_id, token['email'])

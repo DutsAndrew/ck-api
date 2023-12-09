@@ -13,12 +13,13 @@ class UserRef(BaseModel):
 
 class Event(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
-    calendar: str = Field(default_factory=str, required=True)
+    calendar_id: str = Field(default_factory=str, required=True)
     created_by: UserRef = Field(default_factory=dict)
-    event_date_and_time: datetime = Field(default_factory=datetime.now, required=True)
+    event_date: datetime = Field(default_factory=datetime.now, required=True)
     event_description: Optional[str] = Field(default_factory=str)
     event_name: str = Field(default_factory=str, required=True)
-    pattern: str = Field(default_factory=str)
+    event_time: Optional[datetime]
+    repeat_option: str = Field(default_factory=str)
     repeats: Optional[bool] = Field(default_factory=False)
 
     class Config:
