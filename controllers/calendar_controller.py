@@ -1,7 +1,6 @@
 from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
-from models.calendar import PendingUser, Calendar, CalendarNote, Event
-from models.user import UserRef
+from models.calendar import PendingUser, Calendar, CalendarNote, Event, UserRef
 from fastapi.encoders import jsonable_encoder
 from pydantic import ValidationError
 from datetime import datetime
@@ -44,10 +43,10 @@ async def fetch_calendar_app_data(request: Request):
         )
     
 
-async def fetch_all_user_calendar_data(request: Request, userEmail: str):
+async def fetch_all_user_calendar_data(request: Request, user_email: str):
     try:
         user = await request.app.db['users'].find_one(
-            {"email": userEmail},
+            {"email": user_email},
             projection={
                 'calendars': 1,
                 'pending_calendars': 1,
@@ -57,7 +56,7 @@ async def fetch_all_user_calendar_data(request: Request, userEmail: str):
 
         if not user:
             return JSONResponse(content={'detail': 'The account you are using does not exist'}, status_code=404)
-       
+               
         populated_calendars = await populate_all_team_calendars(request, user)
         user['calendars'] = populated_calendars['calendars']
         user['pending_calendars'] = populated_calendars['pending_calendars']
@@ -107,6 +106,7 @@ async def populate_individual_calendars(request: Request, calendar_ids: list[str
     pending_user_ids = set()
     view_only_user_ids = set()
     calendar_notes_ids = set()
+    event_ids = set()
 
     # POPULATE ALL CALENDARS AND STORE ALL DB REFS
     async for calendar in request.app.db['calendars'].find({
@@ -116,6 +116,7 @@ async def populate_individual_calendars(request: Request, calendar_ids: list[str
         authorized_user_ids.update(calendar.get('authorized_users', []))
         view_only_user_ids.update(calendar.get('view_only_users', []))
         calendar_notes_ids.update(calendar.get('calendar_notes', []))
+        event_ids.update(calendar.get('events', []))
 
         for pending_user in calendar.get('pending_users', []):
             user_id = pending_user.get('_id')
@@ -135,16 +136,16 @@ async def populate_individual_calendars(request: Request, calendar_ids: list[str
         '_id': {'$in': list(authorized_user_ids)}},
         projection=user_projection
     ).to_list(None)
-
     view_only_users = await request.app.db['users'].find({
         '_id': {'$in': list(view_only_user_ids)}},
         projection=user_projection
     ).to_list(None)
-
-    # populate all calendar notes
     calendar_notes = await request.app.db['calendar_notes'].find({
         '_id': {'$in': list(calendar_notes_ids)}},
     ).to_list(None)
+    events = await request.app.db['events'].find({
+        '_id': {'$in': list(event_ids)},
+    }).to_list(None)
 
     # CREATE DICT WITH USER REF TIED TO USER INSTANCE
     calendar_authorized_users_dict = {str(user['_id']): user for user in authorized_users}
@@ -184,6 +185,7 @@ async def populate_individual_calendars(request: Request, calendar_ids: list[str
             calendar_view_only_users_dict.get(str(user_id)) for user_id in view_only_user_ids
         ]
         calendar['calendar_notes'] = calendar_notes
+        calendar['events'] = events
 
     return calendars
 
@@ -426,13 +428,12 @@ async def populate_one_calendar(request: Request, calendar_id: str):
     if calendar is None:
         return None
     
-    # set lists for storing user ids for looking up in db
+    # set lists for storing ids for looking up in db
     authorized_user_ids = list(calendar.get('authorized_users', []))
     view_only_user_ids = list(calendar.get('view_only_users', []))
     pending_user_ids = [] # pending users are nested, need to loop through and retrieve id below
-
-    # list of calendar note ids
     calendar_note_ids = list(calendar.get('calendar_notes', []))
+    event_ids = list(calendar.get('events', []))
 
     # pending users are nested, loop through to retrieve and store
     for pending_user in calendar.get('pending_users', []):
@@ -462,13 +463,15 @@ async def populate_one_calendar(request: Request, calendar_id: str):
         '_id': {'$in': pending_user_ids}},
         projection=user_projection
     ).to_list(None)
-
     calendar_notes = await request.app.db['calendar_notes'].find({
         '_id': {'$in': calendar_note_ids}
     }).to_list(None)
+    events = await request.app.db['events'].find({
+        '_id': {'$in': event_ids}
+    }).to_list(None)
 
     # if any list fails return early as None as an error
-    if authorized_users is None or view_only_users is None or pending_users is None or calendar_notes is None:
+    if authorized_users is None or view_only_users is None or pending_users is None or calendar_notes is None or events is None:
         return None
 
     # loop through and assign populated users back to their nested structure with type
@@ -487,6 +490,7 @@ async def populate_one_calendar(request: Request, calendar_id: str):
     calendar['view_only_users'] = view_only_users
     calendar['pending_users'] = pending_users_with_type
     calendar['calendar_notes'] = calendar_notes
+    calendar['events'] = events
     
     return calendar
 
@@ -990,9 +994,20 @@ async def post_event(request: Request, calendar_id: str, user_making_request_ema
     
     new_event = create_event_instance(request_body, calendar_id, user_ref)
 
-    upload_event = await upload_new_event(request, calendar_id, new_event)
+    uploaded_event = await upload_new_event(request, calendar_id, new_event)
 
-    return
+    if isinstance(uploaded_event, JSONResponse):
+        return uploaded_event
+    
+    updated_calendar = await populate_one_calendar(request, calendar_id)
+
+    if updated_calendar is None:
+        return JSONResponse(content={'detail': 'failed to retrieve populated calendar'}, status_code=422)
+    
+    return JSONResponse(content={
+        'detail': 'Success! We uploaded your event',
+        'updated_calendar': updated_calendar,
+    }, status_code=200)
 
 
 async def build_user_reference(request: Request, user_making_request_email: str):
@@ -1001,7 +1016,6 @@ async def build_user_reference(request: Request, user_making_request_email: str)
         projection={
             "first_name": 1,
             "last_name": 1,
-            "_id": 1,
         }
     )
 
@@ -1012,9 +1026,15 @@ async def build_user_reference(request: Request, user_making_request_email: str)
 
 
 def create_event_instance(request_body: dict, calendar_id: str, user_ref: UserRef):
+    compiled_user_ref = UserRef(
+        first_name=user_ref['first_name'],
+        last_name=user_ref['last_name'],
+        user_id=user_ref['_id'],
+    )
+
     new_calendar = Event(
         calendar_id=calendar_id,
-        created_by=user_ref,
+        created_by=compiled_user_ref,
         event_date=datetime.strptime(request_body['date'], '%Y-%m-%d') if request_body['date'] else None,
         event_description=request_body['eventDescription'] if request_body['eventDescription'] else '',
         event_name=request_body['eventName'] if request_body['eventName'] else '',
@@ -1030,4 +1050,22 @@ def create_event_instance(request_body: dict, calendar_id: str, user_ref: UserRe
 
 
 async def upload_new_event(request, calendar_id, new_event):
-    return
+    upload_event = await request.app.db['events'].insert_one(jsonable_encoder(new_event))
+
+    if upload_event is None:
+        return JSONResponse(content={'detail': 'failed to upload event'}, status_code=422)
+
+    update_calendar = await request.app.db['calendars'].update_one(
+        {'_id': calendar_id},
+        {'$push': {'events': str(new_event.id)}}
+    )
+
+    if update_calendar is None:
+        return JSONResponse(content={'detail': 'failed to update calendar with new event'}, status_code=422)
+    
+    posted_event = await request.app.db['events'].find_one({'_id': str(new_event.id)})
+
+    if posted_event is None:
+        return JSONResponse(content={'detail': 'we could not retrieve the posted event'}, status_code=422)
+    
+    return posted_event

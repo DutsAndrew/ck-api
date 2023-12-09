@@ -1,16 +1,10 @@
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel, Field, EmailStr, field_validator, model_validator, ValidationError
+from pydantic import BaseModel, Field, EmailStr, field_validator, ValidationError
 from models.color_scheme import UserColorPreferences
-from models.calendar import Calendar
 from models.bson_object_id import PyObjectId
 from bson import ObjectId
 import re
-
-class UserRef(BaseModel):
-    first_name: str
-    last_name: str
-    user_id: str = Field(default_factory=str)
 
 
 class UserLogin(BaseModel):

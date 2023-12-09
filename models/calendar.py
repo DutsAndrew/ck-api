@@ -14,7 +14,7 @@ class UserRef(BaseModel):
 class Event(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     calendar_id: str = Field(default_factory=str, required=True)
-    created_by: UserRef = Field(default_factory=dict)
+    created_by: UserRef
     event_date: datetime = Field(default_factory=datetime.now, required=True)
     event_description: Optional[str] = Field(default_factory=str)
     event_name: str = Field(default_factory=str, required=True)
