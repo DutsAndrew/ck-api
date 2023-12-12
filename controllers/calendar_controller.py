@@ -1034,6 +1034,9 @@ def create_event_instance(request_body: dict, calendar_id: str, user_ref: UserRe
 
     new_calendar = Event(
         calendar_id=calendar_id,
+        combined_date_and_time=datetime.fromisoformat(request_body['combinedDateAndTime'].replace('Z', '+00:00')) 
+            if request_body['combinedDateAndTime'] 
+            else None,
         created_by=compiled_user_ref,
         event_date=datetime.strptime(request_body['date'], '%Y-%m-%d') if request_body['date'] else None,
         event_description=request_body['eventDescription'] if request_body['eventDescription'] else '',

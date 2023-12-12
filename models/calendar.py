@@ -14,11 +14,12 @@ class UserRef(BaseModel):
 class Event(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     calendar_id: str = Field(default_factory=str, required=True)
+    combined_date_and_time: Optional[datetime]
     created_by: UserRef
     event_date: datetime = Field(default_factory=datetime.now, required=True)
     event_description: Optional[str] = Field(default_factory=str)
     event_name: str = Field(default_factory=str, required=True)
-    event_time: Optional[datetime]
+    event_time: str = Field(default_factory=str)
     repeat_option: str = Field(default_factory=str)
     repeats: Optional[bool] = Field(default_factory=False)
 
