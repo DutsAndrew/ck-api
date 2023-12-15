@@ -95,3 +95,23 @@ async def post_event(
         token: str | bool = Depends(process_bearer_token),
     ):
         return await calendar_controller.post_event(request, calendar_id, token['email'])
+
+
+@calendar_router.put('/{calendar_id}/editEvent/{event_id}')
+async def put_calendar_event(
+        request: Request,
+        calendar_id: str,
+        event_id: str,
+        token: str | bool = Depends(process_bearer_token)
+    ):
+        return await calendar_controller.put_event(request, calendar_id, event_id)
+
+
+@calendar_router.delete('/{calendar_id}/deleteEvent/{event_id}')
+async def delete_calendar_event(
+        request: Request,
+        calendar_id: str,
+        event_id: str,
+        token: str | bool = Depends(process_bearer_token)
+    ):
+        return await calendar_controller.delete_event(request, calendar_id, event_id)

@@ -4,6 +4,7 @@ from models.calendar import PendingUser, Calendar, CalendarNote, Event, UserRef
 from fastapi.encoders import jsonable_encoder
 from pydantic import ValidationError
 from datetime import datetime
+from scripts.json_parser import json_parser
 import logging
 
 logger = logging.getLogger(__name__)
@@ -252,7 +253,11 @@ async def fetch_users_query(request: Request):
     
 
 async def post_new_calendar(request: Request):
-    request_body = await request.json()
+    request_body = await json_parser(request=request)
+
+    if isinstance(request_body, JSONResponse):
+        return request_body
+
     calendar_name = request_body['calendarName']
     user_id = request_body['createdBy']
     authorized_users = request_body['authorizedUsers']
@@ -747,7 +752,11 @@ async def verify_user_has_calendar_authorization(request: Request, user_email: s
 
 async def create_calendar_note_and_verify(request: Request, user, calendar_id: str):
     try:
-        calendar_note_object = await request.json()
+        calendar_note_object = await json_parser(request=request)
+
+        if isinstance(calendar_note_object, JSONResponse):
+            return calendar_note_object
+
         created_by_user = user.copy()
         del created_by_user['personal_calendar']
 
@@ -872,7 +881,10 @@ async def update_note(request: Request, calendar_id: str, note_id: str, user_mak
 
 async def create_updated_note(request: Request, note: CalendarNote, calendar_id: str):
     try:
-        calendar_note_object = await request.json()
+        calendar_note_object = await json_parser(request=request)
+
+        if isinstance(calendar_note_object, JSONResponse):
+            return calendar_note_object
 
         user_ref = UserRef(
             first_name=note['created_by']['first_name'],
@@ -990,7 +1002,10 @@ async def post_event(request: Request, calendar_id: str, user_making_request_ema
     if isinstance(user_ref, JSONResponse):
         return user_ref
     
-    request_body = await request.json()
+    request_body = await json_parser(request=request)
+
+    if isinstance(request_body, JSONResponse):
+        return request_body
     
     new_event = create_event_instance(request_body, calendar_id, user_ref)
 
@@ -1072,3 +1087,117 @@ async def upload_new_event(request, calendar_id, new_event):
         return JSONResponse(content={'detail': 'we could not retrieve the posted event'}, status_code=422)
     
     return posted_event
+
+
+async def put_event(
+        request: Request,
+        calendar_id: str, 
+        event_id: str, 
+    ):
+        user_ref_of_event = await build_event_creator_instance(request, event_id)
+
+        if isinstance(user_ref_of_event, JSONResponse):
+            return user_ref_of_event
+        
+        request_body = await json_parser(request=request)
+
+        if isinstance(request_body, JSONResponse):
+            return request_body
+        
+        edited_event = build_edited_event(request_body, calendar_id, user_ref_of_event, event_id)
+
+        if isinstance(edited_event, JSONResponse):
+            return edited_event
+                
+        upload_updated_event = await update_event_and_calendar(request, edited_event, event_id)
+
+        if isinstance(upload_updated_event, JSONResponse):
+            return upload_updated_event
+        
+        updated_calendar = await populate_one_calendar(request, calendar_id)
+
+        if updated_calendar is None:
+            return JSONResponse(content={'detail': 'there was an issue populating the calendar with the updated event'}, status_code=422)
+
+        return JSONResponse(content={
+            'detail': 'Success! We updated your event',
+            'updated_calendar': updated_calendar,
+        }, status_code=200)
+
+
+async def build_event_creator_instance(request: Request, event_id: str):
+    outdated_event = await request.app.db['events'].find_one({'_id': event_id})
+
+    if outdated_event is None:
+        return JSONResponse(content={'detail': 'event not found'}, status_code=404)
+
+    user_ref = outdated_event['created_by']
+    return user_ref
+
+
+def build_edited_event(request_body: dict, calendar_id: str, user_ref_of_event: dict, event_id: str):
+    compiled_user_ref = UserRef(
+        first_name=user_ref_of_event['first_name'],
+        last_name=user_ref_of_event['last_name'],
+        user_id=user_ref_of_event['user_id'],
+    )
+
+    new_calendar = Event(
+        calendar_id=calendar_id,
+        combined_date_and_time=datetime.fromisoformat(request_body['combinedDateAndTime'].replace('Z', '+00:00')) 
+            if request_body['combinedDateAndTime'] 
+            else None,
+        created_by=compiled_user_ref,
+        event_date=datetime.strptime(request_body['date'], '%Y-%m-%d') if request_body['date'] else None,
+        event_description=request_body['eventDescription'] if request_body['eventDescription'] else '',
+        event_name=request_body['eventName'] if request_body['eventName'] else '',
+        event_time=request_body['selectedTime'] if request_body['selectedTime'] else None,
+        repeat_option=request_body['repeatOption'] if request_body['repeatOption'] else '',
+        repeats=request_body['repeat'] if request_body['repeat'] else False,
+        id=event_id
+    )
+
+    if new_calendar is None:
+        return JSONResponse(content={'detail': 'we could not create your calendar event'}, status_code=422)
+
+    return new_calendar
+
+
+async def update_event_and_calendar(request: Request, edited_event: Event, event_id):
+    print(edited_event)
+    updated_event = await request.app.db['events'].replace_one(
+        {'_id': event_id},
+        jsonable_encoder(edited_event),
+    )
+
+    if updated_event is None:
+        return JSONResponse(content={'detail': 'we could not update that event'}, status_code=422)
+    
+    return
+
+
+async def delete_event(request: Request, calendar_id: str, event_id: str):
+    calendar_ref_removal = await request.app.db['calendars'].update_one(
+        {'_id': calendar_id},
+        {'$pull': {'events': event_id}}
+    )
+
+    if calendar_ref_removal is None:
+        return JSONResponse(content={'detail': 'failed to remove event from calendar'}, status_code=422)
+
+    event_removal = await request.app.db['events'].delete_one({'_id': event_id})
+
+    if event_removal is None:
+        return JSONResponse(content={'detail': 'failed to remove event'}, status_code=422)
+
+    updated_calendar = await populate_one_calendar(request, calendar_id)
+
+    if updated_calendar is None:
+        return JSONResponse(content={'detail': 'there was an issue populating the calendar with the removed event'}, status_code=422)
+
+    return JSONResponse(content={
+        'detail': 'Success! We deleted your event',
+        'updated_calendar': updated_calendar,
+    }, status_code=200)
+
+

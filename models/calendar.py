@@ -12,7 +12,7 @@ class UserRef(BaseModel):
 
 
 class Event(BaseModel):
-    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    id: PyObjectId | str = Field(default_factory=PyObjectId, alias="_id") # string type for when updating an event, so new id isn't created
     calendar_id: str = Field(default_factory=str, required=True)
     combined_date_and_time: Optional[datetime]
     created_by: UserRef
