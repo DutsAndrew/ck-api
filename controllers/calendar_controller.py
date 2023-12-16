@@ -1056,7 +1056,7 @@ def create_event_instance(request_body: dict, calendar_id: str, user_ref: UserRe
         event_date=datetime.strptime(request_body['date'], '%Y-%m-%d') if request_body['date'] else None,
         event_description=request_body['eventDescription'] if request_body['eventDescription'] else '',
         event_name=request_body['eventName'] if request_body['eventName'] else '',
-        event_time=request_body['selectedTime'] if request_body['selectedTime'] else None,
+        event_time=request_body['selectedTime'] if len(request_body['selectedTime']) > 0 else '',
         repeat_option=request_body['repeatOption'] if request_body['repeatOption'] else '',
         repeats=request_body['repeat'] if request_body['repeat'] else False,
     )
@@ -1151,7 +1151,7 @@ def build_edited_event(request_body: dict, calendar_id: str, user_ref_of_event: 
         event_date=datetime.strptime(request_body['date'], '%Y-%m-%d') if request_body['date'] else None,
         event_description=request_body['eventDescription'] if request_body['eventDescription'] else '',
         event_name=request_body['eventName'] if request_body['eventName'] else '',
-        event_time=request_body['selectedTime'] if request_body['selectedTime'] else None,
+        event_time=request_body['selectedTime'] if len(request_body['selectedTime']) > 0 else '',
         repeat_option=request_body['repeatOption'] if request_body['repeatOption'] else '',
         repeats=request_body['repeat'] if request_body['repeat'] else False,
         id=event_id
