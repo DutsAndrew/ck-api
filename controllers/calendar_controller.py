@@ -258,6 +258,7 @@ async def post_new_calendar(request: Request):
     if isinstance(request_body, JSONResponse):
         return request_body
 
+    calendar_color = request_body['calendarColor']
     calendar_name = request_body['calendarName']
     user_id = request_body['createdBy']
     authorized_users = request_body['authorizedUsers']
@@ -267,10 +268,11 @@ async def post_new_calendar(request: Request):
     pending_users = compile_pending_users(authorized_users, view_only_users)
 
     new_calendar = Calendar(
-        'team',
-        calendar_name,
-        user_id,
-        pending_users
+        calendar_color=calendar_color,
+        calendar_type='team',
+        name=calendar_name,
+        user_id=user_id,
+        pending_users=pending_users
     )
 
     return await upload_new_calendar(request, new_calendar, pending_users, user_id)
@@ -1199,5 +1201,3 @@ async def delete_event(request: Request, calendar_id: str, event_id: str):
         'detail': 'Success! We deleted your event',
         'updated_calendar': updated_calendar,
     }, status_code=200)
-
-

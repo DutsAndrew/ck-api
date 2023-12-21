@@ -100,6 +100,7 @@ class PendingUser(BaseModel):
 class Calendar(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     authorized_users: List[PyObjectId] = Field(default_factory=list)
+    calendar_color: str = Field(default_factory=str)
     calendar_notes: List[CalendarNote] = Field(default_factory=list)
     calendar_type: str = Field(default_factory=str)
     created_by: PyObjectId = Field(default_factory=PyObjectId)
@@ -112,10 +113,11 @@ class Calendar(BaseModel):
 
     def __init__(
         self,
-        calendar_type,
-        name,
+        calendar_color: str,
+        calendar_type: str,
+        name: str,
         user_id: PyObjectId,
-        pending_users=None,
+        pending_users: List[PendingUser] = [],
         *args, 
         **kwargs
       ):
@@ -125,6 +127,7 @@ class Calendar(BaseModel):
               self.pending_users = pending_users
 
           self.authorized_users.append(user_id)
+          self.calendar_color = calendar_color
           self.calendar_type = calendar_type
           self.created_by = user_id
           self.name = name
@@ -138,13 +141,4 @@ class Calendar(BaseModel):
             PyObjectId: str,
             datetime: lambda dt: dt.strftime('%Y-%m-%d %H:%M:%S')
           },
-        "json_schema_extra": {
-            "example": {
-                "accompanied_team": None,
-                "accompanied_user": str(ObjectId()),
-                "events": [str(ObjectId()), str(ObjectId())],
-                "type": 'account / team',
-                "year": 2023,
-            }
-        }
     }
