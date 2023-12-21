@@ -42,7 +42,6 @@ class ColorScheme(BaseModel):
 class UserColorPreferences(BaseModel):
     calendars: List[ColorScheme] = Field(default_factory=list)
     chats: List[ColorScheme] = Field(default_factory=list)
-    events: List[ColorScheme] = Field(default_factory=list)
     teams: List[ColorScheme] = Field(default_factory=list)
     user: UserColorScheme = Field(default_factory=lambda: UserColorScheme(
         font_color=None,
