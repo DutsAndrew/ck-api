@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import dotenv_values
 from motor.motor_asyncio import AsyncIOMotorClient
-from scripts.task_runner import task_runner
+from scripts.task_runner import task_runner, stop_task_runner
 import certifi
 import threading
 
@@ -19,10 +19,14 @@ from routes.pages_routes import pages_router
 from routes.tasks_routes import tasks_router
 from routes.teams_routes import teams_router
 
+
 # import custom middleware
 from scripts.custom_middleware import ErrorLoggingMiddleware
 
+
 app = FastAPI()
+task_thread = None
+
 
 # MIDDLEWARE CHAIN
 app.add_middleware(
@@ -43,7 +47,9 @@ app.add_middleware(
 #     print("Response Headers:", response.headers)
 #     return response
 
+
 app.add_middleware(ErrorLoggingMiddleware)
+
 
 async def setup_db_client():
     # get .env files
@@ -53,18 +59,31 @@ async def setup_db_client():
     print("Connected to MongoDB!")
     return app # return app instance after setting up db for testing files
 
+
 async def shutdown_db_client():
     app.mongodb_client.close()
+
 
 @app.on_event("startup")
 async def startup_event():
     await setup_db_client()
+    
+    global task_thread
+
     task_thread = threading.Thread(target=task_runner, args=(app,))
     task_thread.start()
+
 
 @app.on_event("shutdown")
 async def shutdown_event():
     await shutdown_db_client()
+    stop_task_runner()
+
+    global task_thread
+    
+    if task_thread:
+        task_thread.join(timeout=5)
+
 
 # link in all routes to app
 app.include_router(account_router, tags=["account"], prefix="/account")
@@ -78,6 +97,7 @@ app.include_router(notes_router, tags=["note"], prefix="/note")
 app.include_router(pages_router, tags=["page"], prefix="/page")
 app.include_router(tasks_router, tags=["task"], prefix="/task")
 app.include_router(teams_router, tags=["team"], prefix="/team")
+
 
 # start sever from CLI with:
 # python -m uvicorn main:app --reload
