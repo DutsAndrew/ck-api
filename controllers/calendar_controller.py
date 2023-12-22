@@ -185,8 +185,8 @@ async def populate_individual_calendars(request: Request, calendar_ids: list[str
         calendar['view_only_users'] = [
             calendar_view_only_users_dict.get(str(user_id)) for user_id in view_only_user_ids
         ]
-        calendar['calendar_notes'] = calendar_notes
-        calendar['events'] = events
+        calendar['calendar_notes'] = [calendar_note for calendar_note in calendar_notes if calendar_note['calendar_id'] == calendar['_id']]
+        calendar['events'] = [event for event in events if event['calendar_id'] == calendar['_id']]
 
     return calendars
 
