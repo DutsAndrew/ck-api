@@ -66,6 +66,7 @@ cachetools = "*"
 hypothesis = "*"
 hypothesmith = "*"
 holidays = "*"
+schedule = "*"
 
 [dev-packages]
 

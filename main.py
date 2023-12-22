@@ -2,7 +2,9 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import dotenv_values
 from motor.motor_asyncio import AsyncIOMotorClient
+from scripts.task_runner import task_runner
 import certifi
+import threading
 
 # import routes
 from routes.account_routes import account_router
@@ -57,6 +59,8 @@ async def shutdown_db_client():
 @app.on_event("startup")
 async def startup_event():
     await setup_db_client()
+    task_thread = threading.Thread(target=task_runner, args=(app,))
+    task_thread.start()
 
 @app.on_event("shutdown")
 async def shutdown_event():
