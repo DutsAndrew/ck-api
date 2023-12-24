@@ -25,7 +25,7 @@ from scripts.custom_middleware import ErrorLoggingMiddleware
 
 
 app = FastAPI()
-task_thread = None
+# task_thread = None
 
 
 # MIDDLEWARE CHAIN
@@ -68,21 +68,22 @@ async def shutdown_db_client():
 async def startup_event():
     await setup_db_client()
     
-    global task_thread
+    # global task_thread
 
-    task_thread = threading.Thread(target=task_runner, args=(app,))
-    task_thread.start()
+    # task_thread = threading.Thread(target=task_runner, args=(app,))
+    # task_thread.start()
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
+    # stop_task_runner()
     await shutdown_db_client()
-    stop_task_runner()
 
-    global task_thread
+    # global task_thread
     
-    if task_thread:
-        task_thread.join(timeout=5)
+    # if task_thread and task_thread.is_alive():
+    #     task_thread.join(timeout=5)
+
 
 
 # link in all routes to app

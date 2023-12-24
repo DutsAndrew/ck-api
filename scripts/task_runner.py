@@ -6,15 +6,16 @@ task_runner_flag = True
 
 
 def task_runner(app):
+    print('Running task_runner')
+
     schedule.every().day.at("00:00").do(migrate_past_calendar_events_to_archives, app)
     schedule.every().day.at("00:00").do(migrate_past_calendar_notes_to_archives, app)
 
     global task_runner_flag
 
-    while task_runner_flag:
+    while task_runner_flag is True:
         schedule.run_pending()
         time.sleep(60)
-
 
 
 def stop_task_runner():
@@ -22,9 +23,9 @@ def stop_task_runner():
     task_runner_flag = False
 
 
-async def migrate_past_calendar_events_to_archives(app):
-    pass
+def migrate_past_calendar_events_to_archives(app):
+    return
 
 
-async def migrate_past_calendar_notes_to_archives(app):
-    pass
+def migrate_past_calendar_notes_to_archives(app):
+    return
