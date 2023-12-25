@@ -87,8 +87,8 @@ class User(BaseModel):
             raise ValidationError("Your password must be more than 5 characters")
         if len(v) > 100:
             raise ValidationError("your password cannot be more than 100 characters")
-        if not re.match(r'^(?=(.*\d.*){2})(?=.*[!@#$%^&*()_+={}[\]:;<>,.?~])', v):
-           raise ValidationError("Your password must have at least 2 numbers and 1 symbol")
+        if not re.match(r'^(?=.*\d.*)(?=.*[!@#$%^&*()_+={}[\]:;<>,.?~])', v):
+           raise ValidationError("Your password must have at least 1 number and 1 symbol")
         return v
     
     @field_validator('job_title')

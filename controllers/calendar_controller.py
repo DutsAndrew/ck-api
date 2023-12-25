@@ -506,7 +506,7 @@ async def add_user_to_calendar(
         request: Request, 
         calendar_id: str, 
         user_id: str, 
-        type_of_user: str, 
+        permission_type: str, 
         email_of_user_making_change: str
     ):
       try:
@@ -526,7 +526,7 @@ async def add_user_to_calendar(
               request,
               user_id, 
               calendar, 
-              type_of_user, 
+              permission_type, 
           )
 
           if updated_array is None:
@@ -534,7 +534,7 @@ async def add_user_to_calendar(
           
           updated_calendar = await request.app.db['calendars'].find_one({'_id': calendar['_id']})
 
-          if not verify_user_was_added_to_calendar(updated_calendar, type_of_user, user_id):
+          if not verify_user_was_added_to_calendar(updated_calendar, permission_type, user_id):
               return JSONResponse(content={'detail': 'User was not added to calendar successfully'}, status_code=422)
                     
           populated_calendar = await populate_one_calendar(request, updated_calendar['_id'])
@@ -576,12 +576,12 @@ async def append_new_user_to_calendar_user_list(
 
 def verify_user_was_added_to_calendar(
         updated_calendar: Calendar,
-        type_of_user,
+        permission_type,
         user_id: str
     ):
         pending_users = updated_calendar.get('pending_users', [])
         for pending_user in pending_users:
-            if pending_user['_id'] == user_id and pending_user['type'] == type_of_user:
+            if pending_user['_id'] == user_id and pending_user['type'] == permission_type:
                 return True
         return False
         
@@ -1201,3 +1201,12 @@ async def delete_event(request: Request, calendar_id: str, event_id: str):
         'detail': 'Success! We deleted your event',
         'updated_calendar': updated_calendar,
     }, status_code=200)
+
+
+async def update_user_permissions(
+        request: Request,
+        calendar_id: str,
+        permission_type: str,
+        userId: str,
+    ):
+        return

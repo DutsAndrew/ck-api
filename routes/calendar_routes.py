@@ -30,21 +30,19 @@ async def delete_user(request: Request, id: str, type: str, token: str | bool = 
     return await calendar_controller.remove_user_from_calendar(request, id, type, token['email'])
 
 
-@calendar_router.post('/{calendar_id}/addUser/{user_id}/{type_of_user}/{type_of_pending_user}')
+@calendar_router.post('/{calendar_id}/addUser/{user_id}/{permission_type}')
 async def post_new_user(
         request: Request, 
         calendar_id: str,
         user_id: str, 
-        type_of_user: str,
-        type_of_pending_user: str,
+        permission_type: str,
         token: str | bool = Depends(process_bearer_token)
     ):
         return await calendar_controller.add_user_to_calendar(
              request, 
              calendar_id, 
              user_id, 
-             type_of_user, 
-             type_of_pending_user, 
+             permission_type, 
              token['email']
         )
 
@@ -115,3 +113,18 @@ async def delete_calendar_event(
         token: str | bool = Depends(process_bearer_token)
     ):
         return await calendar_controller.delete_event(request, calendar_id, event_id)
+
+
+@calendar_router.put('/{calendar_id}/{permission_type}/updateUserPermissions/{userId}')
+async def put_calendar_user_permissions(
+        request: Request,
+        calendar_id: str,
+        permission_type: str,
+        userId: str,
+    ):
+        return await calendar_controller.update_user_permissions(
+            request,
+            calendar_id,
+            permission_type,
+            userId,
+        )
