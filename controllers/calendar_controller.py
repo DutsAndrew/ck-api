@@ -353,7 +353,7 @@ async def upload_new_calendar(request: Request, new_calendar: Calendar, pending_
         )
 
     
-async def remove_user_from_calendar(request: Request, calendar_id: str, type: str, user_id: str, user_making_request_email: str):
+async def remove_user_from_calendar(request: Request, calendar_id: str, user_type: str, user_id: str, user_making_request_email: str):
     try:
         # query user and calendar to perform operations
         user, calendar = await validate_user_and_calendar(request, user_making_request_email, calendar_id)
@@ -369,7 +369,7 @@ async def remove_user_from_calendar(request: Request, calendar_id: str, type: st
             return JSONResponse(content={'detail': 'insufficient permissions'})
         
         # remove user that was requested to be removed
-        filtered_calendar = filter_out_user_from_calendar_list(user_id, calendar, type)
+        filtered_calendar = filter_out_user_from_calendar_list(user_id, calendar, user_type)
 
         # just a validity check to ensure that an API call wasn't made with a false type, return if that's the case
         if filtered_calendar is None:
@@ -413,13 +413,13 @@ def has_calendar_permissions(user, calendar):
     return user is not None and (calendar['created_by'] == user['_id'] or user['_id'] in calendar['authorized_users'])
     
 
-def filter_out_user_from_calendar_list(user_id, calendar, type):
-    if type == 'authorized':
+def filter_out_user_from_calendar_list(user_id, calendar, user_type):
+    if user_type == 'authorized':
         calendar['authorized_users'].remove(user_id)
-    elif type == 'pending':
+    elif user_type == 'pending':
         updated_pending_users = [user for user in calendar['pending_users'] if user['_id'] != user_id] # users are nested in pending list, need to loop through to modify
         calendar['pending_users'] = updated_pending_users
-    elif type == 'view_only':
+    elif user_type == 'view_only':
         calendar['view_only_users'].remove(user_id)
     else:
         return None # invalid type
