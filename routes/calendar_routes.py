@@ -115,16 +115,16 @@ async def delete_calendar_event(
         return await calendar_controller.delete_event(request, calendar_id, event_id)
 
 
-@calendar_router.put('/{calendar_id}/{permission_type}/updateUserPermissions/{userId}')
+@calendar_router.put('/{calendar_id}/{new_user_permissions}/updateUserPermissions/{userId}')
 async def put_calendar_user_permissions(
         request: Request,
         calendar_id: str,
-        permission_type: str,
+        new_user_permissions: str,
         userId: str,
     ):
         return await calendar_controller.update_user_permissions(
             request,
             calendar_id,
-            permission_type,
+            new_user_permissions,
             userId,
         )

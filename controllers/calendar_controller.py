@@ -1206,7 +1206,94 @@ async def delete_event(request: Request, calendar_id: str, event_id: str):
 async def update_user_permissions(
         request: Request,
         calendar_id: str,
-        permission_type: str,
-        userId: str,
+        new_user_permissions: str,
+        user_id: str,
     ):
-        return
+        calendar = await request.app.db['calendars'].find_one({'_id': calendar_id})
+
+        if calendar is None:
+            return JSONResponse(content={'detail': 'that calendar could not be found'}, status_code=404)
+
+        current_user_permissions = get_user_permissions_in_calendar(calendar, user_id)
+
+        if current_user_permissions is None:
+            return JSONResponse(content={'detail': 'that user does not belong to this calendar'}, status_code=422)
+        
+        current_user_permissions = await change_user_calendar_permissions(
+            request, 
+            calendar_id,
+            current_user_permissions,
+            new_user_permissions,
+            user_id
+        )
+
+
+def get_user_permissions_in_calendar(calendar: Calendar, userId: str):
+    if userId in calendar.authorized_users:
+        return 'authorized'
+    
+    if userId in calendar.view_only_users:
+        return 'view_only'
+
+    for userInstance in calendar.pending_users:
+        if userId == userInstance._id:
+            return 'pending'
+        
+    return None
+
+
+async def change_user_calendar_permissions(
+        request: Request,
+        calendar_id: str,
+        current_user_permissions: str,
+        new_user_permissions: str,
+        user_id: str,
+    ):
+        if current_user_permissions is new_user_permissions:
+            return JSONResponse(content={'detail': 'cannot change user permissions to what they already are'}, status_code=422)
+
+        permission_removal_status = await remove_user_permissions(
+            request, 
+            calendar_id, 
+            current_user_permissions, 
+            user_id
+        )
+
+        if isinstance(permission_removal_status, JSONResponse):
+            return permission_removal_status
+        
+        
+
+
+async def remove_user_permissions(
+        request: Request, 
+        calendar_id: str, 
+        current_user_permissions: str, 
+        user_id: str,
+    ):
+        if current_user_permissions is 'pending':
+            pending_users = await request.app.db['calendars'].find_one(
+                {'_id': calendar_id},
+                projection={
+                    'pending_users': 1,
+                }
+            )
+
+            if pending_users is None:
+                return JSONResponse(content={'detail': 'could not retrieve pending users'}, status_code=422)
+
+            for user in pending_users.pending_users:
+                if user._id is user_id:
+                    pass
+
+        calendar = await request.app.db['calendars'].update_one(
+            {'_id': calendar_id},
+            {'$pull': {f"{current_user_permissions}_users": user_id}}
+        )
+
+        if calendar is None:
+            return JSONResponse(content={'detail': 'that user\'s permission could not be changed'}, status_code=422)
+
+        return calendar
+
+
