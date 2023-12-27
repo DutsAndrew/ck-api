@@ -1219,7 +1219,7 @@ async def update_user_permissions(
         if current_user_permissions is None:
             return JSONResponse(content={'detail': 'that user does not belong to this calendar'}, status_code=422)
         
-        current_user_permissions = await change_user_calendar_permissions(
+        user_permission_change_status = await change_user_calendar_permissions(
             request, 
             calendar_id,
             current_user_permissions,
@@ -1227,16 +1227,29 @@ async def update_user_permissions(
             user_id
         )
 
+        if isinstance(user_permission_change_status, JSONResponse):
+            return user_permission_change_status
+        
+        repopulated_calendar = await populate_one_calendar(request, calendar_id)
+
+        if repopulated_calendar is None:
+            return JSONResponse(content={'detail': 'we failed to repopulate the calendar you requested to update'}, status_code=422)
+
+        return JSONResponse(content={
+            'detail': 'Success! We changed the user\'s permissions and repopulated the calendar',
+            'updated_calendar': repopulated_calendar,
+        }, status_code=200)
+
 
 def get_user_permissions_in_calendar(calendar: Calendar, userId: str):
-    if userId in calendar.authorized_users:
+    if userId in calendar['authorized_users']:
         return 'authorized'
     
-    if userId in calendar.view_only_users:
+    if userId in calendar['view_only_users']:
         return 'view_only'
 
-    for userInstance in calendar.pending_users:
-        if userId == userInstance._id:
+    for user_instance in calendar['pending_users']:
+        if userId == user_instance['_id']:
             return 'pending'
         
     return None
@@ -1262,6 +1275,16 @@ async def change_user_calendar_permissions(
         if isinstance(permission_removal_status, JSONResponse):
             return permission_removal_status
         
+        permission_addition_status = await add_user_permissions(
+            request,
+            calendar_id,
+            current_user_permissions,
+            new_user_permissions,
+            user_id
+        )
+
+        if isinstance(permission_addition_status, JSONResponse):
+            return permission_addition_status
         
 
 
@@ -1271,21 +1294,55 @@ async def remove_user_permissions(
         current_user_permissions: str, 
         user_id: str,
     ):
-        if current_user_permissions is 'pending':
-            pending_users = await request.app.db['calendars'].find_one(
-                {'_id': calendar_id},
-                projection={
-                    'pending_users': 1,
-                }
+        if current_user_permissions == 'pending':
+            pending_user_removal = await remove_pending_user_from_calendar(request, calendar_id, user_id)
+
+            if isinstance(pending_user_removal, JSONResponse):
+                return pending_user_removal
+        else:
+            non_pending_user_removal = await remove_non_pending_user_from_calendar(
+                request, 
+                calendar_id, 
+                user_id, 
+                current_user_permissions
             )
 
-            if pending_users is None:
-                return JSONResponse(content={'detail': 'could not retrieve pending users'}, status_code=422)
+            if isinstance(non_pending_user_removal, JSONResponse):
+                return non_pending_user_removal
 
-            for user in pending_users.pending_users:
-                if user._id is user_id:
-                    pass
 
+async def remove_pending_user_from_calendar(request: Request, calendar_id: str, user_id: str):
+    pending_users = await request.app.db['calendars'].find_one(
+        {'_id': calendar_id},
+        projection={
+            'pending_users': 1,
+        }
+    )
+
+    if pending_users is None:
+        return JSONResponse(content={'detail': 'could not retrieve pending users'}, status_code=422)
+    
+    filtered_users = pending_users['pending_users']
+
+    for user in filtered_users:
+        if user['_id'] == user_id:
+            filtered_users.remove(user)
+
+    updated_pending_users = await request.app.db['calendars'].update_one(
+        {'_id': calendar_id},
+        {'$set': {'pending_users': filtered_users}}
+    )
+
+    if updated_pending_users is None:
+        return JSONResponse(content={'detail': 'failed to update pending users list'}, status_code=422)
+
+
+async def remove_non_pending_user_from_calendar(
+        request: Request, 
+        calendar_id: str, 
+        user_id: str,
+        current_user_permissions: str,
+    ):
         calendar = await request.app.db['calendars'].update_one(
             {'_id': calendar_id},
             {'$pull': {f"{current_user_permissions}_users": user_id}}
@@ -1293,7 +1350,38 @@ async def remove_user_permissions(
 
         if calendar is None:
             return JSONResponse(content={'detail': 'that user\'s permission could not be changed'}, status_code=422)
-
+        
         return calendar
 
 
+async def add_user_permissions(
+        request: Request,
+        calendar_id: str,
+        current_user_permissions: str,
+        new_user_permissions: str,
+        user_id: str,
+    ):
+        # IF USER IS PENDING, USER MUST REMAIN PENDING BUT CHANGE PENDING TYPE
+        if current_user_permissions == 'pending':
+            pending_user = PendingUser(type=new_user_permissions, user_id=user_id)
+
+            upload_pending_user = await request.app.db['calendars'].update_one(
+                {'_id': calendar_id},
+                {'$push': {'pending_users': jsonable_encoder(pending_user)}}
+            )
+
+            if upload_pending_user is None:
+                return JSONResponse(content={'detail': 'failed to switch user to pending user'}, status_code=422)
+            
+            return upload_pending_user
+
+        else:
+            upload_non_pending_user = await request.app.db['calendars'].update_one(
+                {'_id': calendar_id},
+                {'$push': {f"{new_user_permissions}_users": user_id}}
+            )
+
+            if upload_non_pending_user is None:
+                return JSONResponse(content={'detail': 'failed to switch user to pending user'}, status_code=422)
+            
+            return upload_non_pending_user
