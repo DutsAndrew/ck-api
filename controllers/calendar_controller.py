@@ -1213,6 +1213,9 @@ async def update_user_permissions(
 
         if calendar is None:
             return JSONResponse(content={'detail': 'that calendar could not be found'}, status_code=404)
+        
+        if calendar['created_by'] == user_id:
+          return JSONResponse(content={'detail': 'you cannot change the permissions of the calendar creator'}, status_code=422)
 
         current_user_permissions = get_user_permissions_in_calendar(calendar, user_id)
 
