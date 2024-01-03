@@ -23,8 +23,7 @@ class UserColorScheme(BaseModel):
     }
 
 class ColorScheme(BaseModel):
-    apply_to_which_object_id: Optional[str]
-    font_color: Optional[str]
+    object_id: Optional[str]
     background_color: Optional[str]
 
     model_config = {
@@ -32,7 +31,7 @@ class ColorScheme(BaseModel):
         "arbitrary_types_allowed": True,
         "json_schema_extra": {
             "example": {
-                "apply_to_which_object_id": "123",
+                "object_id": "123",
                 "font_color": "#37D9C8",
                 "background_color": "rgb(55, 217, 200)"
             }
@@ -55,54 +54,45 @@ class UserColorPreferences(BaseModel):
             "example": {
                 "calendars": [
                     {
-                        "apply_to_which_object_id": "calendar_id_1",
-                        "font_color": "#FF0000",
+                        "object_id": "calendar_id_1",
                         "background_color": "rgb(255, 0, 0)"
                     },
                     {
-                        "apply_to_which_object_id": "calendar_id_2",
-                        "font_color": "#0000FF",
+                        "object_id": "calendar_id_2",
                         "background_color": "rgb(0, 0, 255)"
                     }
                 ],
                 "chats": [
                     {
-                        "apply_to_which_object_id": "chat_id_1",
-                        "font_color": "#00FF00",
+                        "object_id": "chat_id_1",
                         "background_color": "rgb(0, 255, 0)"
                     },
                     {
-                        "apply_to_which_object_id": "chat_id_2",
-                        "font_color": "#00FF00",
+                        "object_id": "chat_id_2",
                         "background_color": "rgb(0, 255, 0)"
                     }
                 ],
                 "events": [
                     {
-                        "apply_to_which_object_id": "event_id_1",
-                        "font_color": "#FFFF00",
+                        "object_id": "event_id_1",
                         "background_color": "rgb(255, 255, 0)"
                     },
                     {
-                        "apply_to_which_object_id": "event_id_2",
-                        "font_color": "#FFFF00",
+                        "object_id": "event_id_2",
                         "background_color": "rgb(255, 255, 0)"
                     }
                 ],
                 "teams": [
                     {
-                        "apply_to_which_object_id": "team_id_1",
-                        "font_color": "#FF00FF",
+                        "object_id": "team_id_1",
                         "background_color": "rgb(255, 0, 255)"
                     },
                     {
-                        "apply_to_which_object_id": "team_id_2",
-                        "font_color": "#FF00FF",
+                        "object_id": "team_id_2",
                         "background_color": "rgb(255, 0, 255)"
                     }
                 ],
                 "user": {
-                    "font_color": "#000000",
                     "background_color": "#FFFFFF"
                 },
             }

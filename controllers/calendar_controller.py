@@ -968,7 +968,15 @@ async def delete_note(request: Request, calendar_id: str, calendar_note_id: str)
     if isinstance(note_removal_status, JSONResponse):
         return note_removal_status
     
-    return JSONResponse(content={'detail': 'Success! Calendar was updated, note was removed'},status_code=200)
+    populated_calendar = await populate_one_calendar(request, calendar_id=calendar_id)
+
+    if populated_calendar is None:
+        return JSONResponse(content={'detail': 'we failed to populate an updated calendar without the note, but the note was removed'}, status_code=422)
+    
+    return JSONResponse(content={
+        'detail': 'Success! Calendar was updated, note was removed',
+        'updated_calendar': populated_calendar,
+    },status_code=200)
 
 
 async def fetch_calendar_and_note(request: Request, calendar_id: str, calendar_note_id: str):
