@@ -1410,8 +1410,6 @@ async def set_user_preferred_calendar_color(
             'user_color_preferences.calendars': 1,
         })
 
-        # CHECK IF CALENDAR_ID IS ALREADY IN USER PREFERENCES TO SWITCH TO REPLACE ONE INSTEAD OF UPDATE ONE IF NECESSARY
-
         if user is None or calendar is None:
             return JSONResponse(content={'detail': 'The user or calendar you sent could not be found'}, status_code=404)
 
@@ -1425,32 +1423,77 @@ async def set_user_preferred_calendar_color(
         if len(preferred_color) == 0:
             return JSONResponse(content={'detail': 'no preferred color sent'}, status_code=422)
 
-        preferred_color_scheme = ColorScheme(calendar_id, preferred_color)
+        new_color_scheme = ColorScheme(object_id=calendar_id, background_color=preferred_color)
 
-        update_user = await add_preferred_calendar_color_to_user(
-            request,
-            user['_id'],
-            preferred_color_scheme,
-        )
+        color_preference_update = await set_preferred_calendar_color(request, user, new_color_scheme)
 
-        if isinstance(update_user, JSONResponse):
-            return update_user
+        if isinstance(color_preference_update, JSONResponse):
+            return color_preference_update
         
         return JSONResponse(content={
             'detail': 'Success! We added your preferences',
-            'preferredColor': preferred_color_scheme,
+            'preferredColor': new_color_scheme,
         }, status_code=200)
+
+
+async def set_preferred_calendar_color(request: Request, user: object, new_color_scheme: ColorScheme):
+    
+    # check if a color scheme is set, if so call function to replace the current color scheme
+    user_color_preferences = user['user_color_preferences']['calendars']
+    if user_color_preferences:
+        for color_preference in user_color_preferences:
+            if color_preference['object_id'] == new_color_scheme.object_id:
+                update_preference = await replace_old_calendar_color_preference(
+                    request, 
+                    user['_id'], 
+                    color_preference['object_id'],
+                    new_color_scheme
+                )
+
+                if isinstance(update_preference, JSONResponse):
+                    return update_preference
+                
+                return update_preference
+
+    update_user = await add_preferred_calendar_color_to_user(
+        request,
+        user['_id'],
+        new_color_scheme,
+    )
+
+    if isinstance(update_user, JSONResponse):
+        return update_user
+    
+    return update_user
+    
+
+async def replace_old_calendar_color_preference(
+        request: Request, 
+        user_id: str, 
+        old_color_scheme_id: str, 
+        new_color_scheme: ColorScheme
+    ):
+        user_update = await request.app.db['users'].update_one(
+            {'_id': user_id},
+            {'$set': {f'user_color_preferences.calendars.$[query]': jsonable_encoder(new_color_scheme)}},
+            array_filters=[{'query.object_id': old_color_scheme_id}]
+        )
+
+        if user_update is None:
+            return JSONResponse(content={'detail': 'we failed to upload user preferences'}, status_code=422)
+
+        return user_update
 
 
 async def add_preferred_calendar_color_to_user(
         request: Request,
         user_id: str,
-        preferred_color_scheme: ColorScheme
+        new_color_scheme: ColorScheme
     ):
 
         user_update = await request.app.db['users'].update_one(
             {'_id': user_id},
-            {'$push': {'user_color_preferences.calendars': preferred_color_scheme}}
+            {'$push': {'user_color_preferences.calendars': jsonable_encoder(new_color_scheme)}}
         )
 
         if user_update is None:

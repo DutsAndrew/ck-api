@@ -22,21 +22,11 @@ class UserColorScheme(BaseModel):
         }
     }
 
+
 class ColorScheme(BaseModel):
     object_id: Optional[str]
     background_color: Optional[str]
 
-    model_config = {
-        "populate_by_name": True,
-        "arbitrary_types_allowed": True,
-        "json_schema_extra": {
-            "example": {
-                "object_id": "123",
-                "font_color": "#37D9C8",
-                "background_color": "rgb(55, 217, 200)"
-            }
-        }
-    }
 
 class UserColorPreferences(BaseModel):
     calendars: List[ColorScheme] = Field(default_factory=list)

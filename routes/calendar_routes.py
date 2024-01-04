@@ -131,7 +131,7 @@ async def put_calendar_user_permissions(
         )
 
 
-@calendar_router.put('/{calendar_id}/setPreferredColor')
+@calendar_router.post('/{calendar_id}/setPreferredColor')
 async def put_preferred_colors(
         request: Request,
         calendar_id: str,
