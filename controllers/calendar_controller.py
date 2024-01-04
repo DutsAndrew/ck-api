@@ -1,6 +1,7 @@
 from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
 from models.calendar import PendingUser, Calendar, CalendarNote, Event, UserRef
+from models.color_scheme import ColorScheme
 from fastapi.encoders import jsonable_encoder
 from pydantic import ValidationError
 from datetime import datetime
@@ -1396,3 +1397,63 @@ async def add_user_permissions(
                 return JSONResponse(content={'detail': 'failed to switch user to pending user'}, status_code=422)
             
             return upload_non_pending_user
+        
+
+async def set_user_preferred_calendar_color(
+        request: Request, 
+        calendar_id: str,
+        user_email: str,
+    ):
+        calendar = await request.app.db['calendars'].find_one({'_id': calendar_id})
+        user = await request.app.db['users'].find_one({'email': user_email}, projection={
+            '_id': 1,
+            'user_color_preferences.calendars': 1,
+        })
+
+        # CHECK IF CALENDAR_ID IS ALREADY IN USER PREFERENCES TO SWITCH TO REPLACE ONE INSTEAD OF UPDATE ONE IF NECESSARY
+
+        if user is None or calendar is None:
+            return JSONResponse(content={'detail': 'The user or calendar you sent could not be found'}, status_code=404)
+
+        request_body = await json_parser(request=request)
+
+        if isinstance(request_body, JSONResponse):
+            return request_body
+        
+        preferred_color = request_body['preferredColor']
+
+        if len(preferred_color) == 0:
+            return JSONResponse(content={'detail': 'no preferred color sent'}, status_code=422)
+
+        preferred_color_scheme = ColorScheme(calendar_id, preferred_color)
+
+        update_user = await add_preferred_calendar_color_to_user(
+            request,
+            user['_id'],
+            preferred_color_scheme,
+        )
+
+        if isinstance(update_user, JSONResponse):
+            return update_user
+        
+        return JSONResponse(content={
+            'detail': 'Success! We added your preferences',
+            'preferredColor': preferred_color_scheme,
+        }, status_code=200)
+
+
+async def add_preferred_calendar_color_to_user(
+        request: Request,
+        user_id: str,
+        preferred_color_scheme: ColorScheme
+    ):
+
+        user_update = await request.app.db['users'].update_one(
+            {'_id': user_id},
+            {'$push': {'user_color_preferences.calendars': preferred_color_scheme}}
+        )
+
+        if user_update is None:
+            return JSONResponse(content={'detail': 'we failed to upload user preferences'}, status_code=422)
+
+        return user_update

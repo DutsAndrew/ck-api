@@ -121,10 +121,24 @@ async def put_calendar_user_permissions(
         calendar_id: str,
         new_user_permissions: str,
         userId: str,
+        token: str | bool = Depends(process_bearer_token),
     ):
         return await calendar_controller.update_user_permissions(
             request,
             calendar_id,
             new_user_permissions,
             userId,
+        )
+
+
+@calendar_router.put('/{calendar_id}/setPreferredColor')
+async def put_preferred_colors(
+        request: Request,
+        calendar_id: str,
+        token: str | bool = Depends(process_bearer_token),
+    ):
+        return await calendar_controller.set_user_preferred_calendar_color(
+            request,
+            calendar_id,
+            token['email'],
         )
