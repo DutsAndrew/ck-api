@@ -1432,7 +1432,7 @@ async def set_user_preferred_calendar_color(
         
         return JSONResponse(content={
             'detail': 'Success! We added your preferences',
-            'preferredColor': new_color_scheme,
+            'preferredColor': jsonable_encoder(new_color_scheme),
         }, status_code=200)
 
 
@@ -1447,7 +1447,7 @@ async def set_preferred_calendar_color(request: Request, user: object, new_color
                     request, 
                     user['_id'], 
                     color_preference['object_id'],
-                    new_color_scheme
+                    new_color_scheme,
                 )
 
                 if isinstance(update_preference, JSONResponse):
@@ -1471,7 +1471,7 @@ async def replace_old_calendar_color_preference(
         request: Request, 
         user_id: str, 
         old_color_scheme_id: str, 
-        new_color_scheme: ColorScheme
+        new_color_scheme
     ):
         user_update = await request.app.db['users'].update_one(
             {'_id': user_id},
@@ -1488,9 +1488,8 @@ async def replace_old_calendar_color_preference(
 async def add_preferred_calendar_color_to_user(
         request: Request,
         user_id: str,
-        new_color_scheme: ColorScheme
+        new_color_scheme
     ):
-
         user_update = await request.app.db['users'].update_one(
             {'_id': user_id},
             {'$push': {'user_color_preferences.calendars': jsonable_encoder(new_color_scheme)}}
