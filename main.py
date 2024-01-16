@@ -18,6 +18,7 @@ from routes.notes_routes import notes_router
 from routes.pages_routes import pages_router
 from routes.tasks_routes import tasks_router
 from routes.teams_routes import teams_router
+from routes.users_routes import users_router
 
 
 # import custom middleware
@@ -38,22 +39,21 @@ app.add_middleware(
     expose_headers=["Authorization"],
 )
 
-
-# @app.middleware("http")
-# async def log_headers(request: Request, call_next):
-#     print("Request Headers:", request.headers)
-#     print("Cookies in request:", request.cookies)
-#     response = await call_next(request)
-#     print("Response Headers:", response.headers)
-#     return response
+### DEV FUNCTION TO CHECK ERRORS WITH REQUESTS/RESPONSES IN API
+@app.middleware("http")
+async def log_headers(request: Request, call_next):
+    print("Request Headers:", request.headers)
+    print("Cookies in request:", request.cookies)
+    response = await call_next(request)
+    print("Response Headers:", response.headers)
+    return response
 
 
 app.add_middleware(ErrorLoggingMiddleware)
 
 
 async def setup_db_client():
-    # get .env files
-    config = dotenv_values(".env")
+    config = dotenv_values(".env") # get .env files
     app.mongodb_client = AsyncIOMotorClient(config["DEV_MONGO_URI"], tlsCAFile=certifi.where())
     app.db = app.mongodb_client[config["DEV_DB_NAME"]]
     print("Connected to MongoDB!")
@@ -98,6 +98,7 @@ app.include_router(notes_router, tags=["note"], prefix="/note")
 app.include_router(pages_router, tags=["page"], prefix="/page")
 app.include_router(tasks_router, tags=["task"], prefix="/task")
 app.include_router(teams_router, tags=["team"], prefix="/team")
+app.include_router(users_router, tags=["users"], prefix="/users")
 
 
 # start sever from CLI with:

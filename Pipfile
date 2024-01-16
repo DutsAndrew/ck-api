@@ -67,6 +67,7 @@ hypothesis = "*"
 hypothesmith = "*"
 holidays = "*"
 schedule = "*"
+fastapi-cache = {version = "*", extras = ["mongodb"]}
 
 [dev-packages]
 
