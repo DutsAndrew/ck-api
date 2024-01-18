@@ -11,6 +11,7 @@ class UserLogin(BaseModel):
     email: str
     password: str
 
+
 class User(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     account_type: str = Field(default='basic')

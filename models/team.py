@@ -13,15 +13,25 @@ from bson import ObjectId
 ### team lead assigned to manage team
 ### color scheme set by group
 
+class UserRef(BaseModel):
+    first_name: str
+    last_name: str
+    job_title: str
+    company: str
+    user_id: str = Field(default_factory=str)
+
 class Team(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     calendar: Optional[PyObjectId] = Field(None)
+    description: str
+    name: str
     notes: Optional[List[PyObjectId]] = Field(default_factory=list)
     notifications: Optional[List[PyObjectId]] = Field(None)
     tasks: Optional[List[PyObjectId]] = Field(default_factory=list)
+    team_color: str
     team_lead: Optional[PyObjectId] = Field(None)
-    users: Optional[List[PyObjectId]] = Field(default_factory=list)
-    pending_users: Optional[List[PyObjectId]] = Field(default_factory=list)
+    users: Optional[List[UserRef]] = Field(default_factory=list)
+    pending_users: Optional[List[UserRef]] = Field(default_factory=list)
 
     model_config = {
         "populate_by_name": True,
