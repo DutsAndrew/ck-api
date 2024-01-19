@@ -2,6 +2,7 @@ from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
 from models.team import Team
 from models.team import UserRef
+from models.calendar import Calendar
 from models.color_scheme import ColorScheme
 from fastapi.encoders import jsonable_encoder
 from pydantic import ValidationError
@@ -14,9 +15,12 @@ logger = logging.getLogger(__name__)
 async def create_team(request: Request):
     request_body = await json_parser(request=request)
     
-    team_obj = create_team_object(request_body)
+    new_team = create_team_object(request_body)
 
-    print(request_body)
+    if isinstance(new_team, JSONResponse):
+        return new_team
+
+    print(new_team)
 
 
 
@@ -31,13 +35,12 @@ def create_team_object(request_body: object):
 
     try:
         new_team = Team(
-            calendar=(),
             description=team_description,
             name=team_name,
             notifications=[],
             tasks=[],
             team_color=team_color,
-            team_lead=None,
+            team_lead="",
             pending_users=converted_team_members,
             users=[
                 UserRef(
@@ -45,13 +48,15 @@ def create_team_object(request_body: object):
                     last_name=team_creator['last_name'],
                     job_title=team_creator['job_title'],
                     company=team_creator['company'],
+                    user_id=team_creator['user_id'],
                 ),
-            ]
+            ],
         )
 
-        print(new_team)
+        return new_team
     except Exception as e:
-        return JSONResponse(content={'detail': 'failed to create team instance'}, status_code=422)
+        logger.error(msg=f"error: {e}")
+        return JSONResponse(content={'detail': f"failed to create team instance, error: {e}"}, status_code=422)
 
 
 def build_team_member_objects(team_members):
