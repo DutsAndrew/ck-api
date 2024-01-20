@@ -17,8 +17,8 @@ async def create_team(request: Request):
 
     if isinstance(new_team, JSONResponse):
         return new_team
-    
-    calendar = create_calendar_instance(
+        
+    calendar = create_calendar_object(
         team_id=str(new_team.id), 
         team_color=new_team.team_color,
         team_name=new_team.name,
@@ -28,8 +28,15 @@ async def create_team(request: Request):
 
     if isinstance(calendar, JSONResponse):
         return calendar
+    
+    new_team.add_team_calendar(calendar_id=str(calendar.id))
 
-    upload_status = await upload_team_and_team_calendar_to_db(request, new_team, calendar)
+    uploaded_objects = await upload_team_and_team_calendar_to_db(request, new_team, calendar)
+
+    if isinstance(uploaded_objects, JSONResponse):
+        return uploaded_objects
+
+    return JSONResponse(content={'detail': 'Success! We uploaded your team, invited users, and added a team calendar!'}, status_code=200)
 
 
 
@@ -83,12 +90,13 @@ def build_team_member_objects(team_members: []):
             )
             member_array.append(user)
         except Exception as e:
+            logger.error(e)
             return JSONResponse(content={'detail': f'we failed to add a user as a team member, error: {e}'}, status_code=422)
                         
     return member_array
 
 
-def create_calendar_instance(
+def create_calendar_object(
         team_id: str, 
         team_color: str,
         team_name: str,
@@ -100,13 +108,14 @@ def create_calendar_instance(
         calendar_obj = Calendar(
             calendar_type='team-calendar',
             calendar_color=team_color,
-            name=f"{team_name}' - Team Calendar",
+            name=f"{team_name} - Team Calendar",
             user_id=creator_user_id,
             pending_users=convert_user_ref_list_to_pending_calendar_users_list(pending_users),
             team_id=team_id,
         )
         return calendar_obj
     except Exception as e:
+        logger.error(e)
         return JSONResponse(content={'detail': f'we failed to create a team calendar for the team, error: {e}'}, status_code=422)
 
 
@@ -125,4 +134,83 @@ def convert_user_ref_list_to_pending_calendar_users_list(pending_users: list[Use
 
 
 async def upload_team_and_team_calendar_to_db(request: Request, new_team: Team, calendar: Calendar):
-    pass
+    try:
+        upload_calendar = request.app.db['calendars'].insert_one(jsonable_encoder(calendar))
+
+        if upload_calendar is None:
+            return JSONResponse(content={'detail': 'failed to upload calendar'}, status_code=422)
+        
+        invite_calendar_users = await invite_users_to_team_calendar(request=request, calendar=calendar)
+
+        if isinstance(invite_calendar_users, JSONResponse):
+            return invite_calendar_users
+                
+        upload_team = request.app.db['teams'].insert_one(new_team.encode_team_for_upload())
+
+        if upload_team is None:
+            return JSONResponse(content={'detail': 'failed to upload team'}, status_code=422)
+        
+        invite_team_users = await invite_users_to_team(request, new_team)
+
+        if isinstance(invite_team_users, JSONResponse):
+            return invite_team_users
+
+        return {
+            upload_calendar,
+            upload_team,
+        }
+        
+    except Exception as e:
+        logger.error(e)
+        return JSONResponse(content={'detail': f'failed to upload calendar and or team to db, error: {e}'}, status_code=422)
+
+
+async def invite_users_to_team_calendar(request: Request, calendar: Calendar):
+    users_to_invite: list[str] = []
+
+    for pending_user in calendar.pending_users:
+        users_to_invite.append(pending_user.user_id)
+
+    try:
+        # add calendar as a pending one for each invited user
+        async for user_id in request.app.db['users'].find({'_id': {'$in': users_to_invite}}):
+            request.app.db['users'].update_one(
+                {'_id': user_id},
+                {'$push': {'pending_calendars': calendar.id}}
+            )
+
+        # user who created teh calendar should have it automatically added as an approved calendar
+        request.app.db['users'].update_one(
+            {'_id': calendar.authorized_users[0]},
+            {'$push': {'calendars': calendar.id}}
+        )
+        return
+    except Exception as e:
+        logger.error(e)
+        return JSONResponse(content={'detail': f'we ran into an issue updating the invited users to the team calendar {e}'}, status_code=422)
+    
+
+async def invite_users_to_team(request: Request, new_team: Team):
+    users_to_invite: list[str] = []
+    merged_user_lists = new_team.users + new_team.pending_users
+
+    for user in merged_user_lists:
+        users_to_invite.append(user.user_id)
+
+    try:
+        # add team_id to pending teams array for every invited user
+        async for user_id in request.app.db['users'].find({'_id': {'$in': users_to_invite}}):
+            request.app.db['users'].update_one(
+                {'_id': user_id},
+                {'$push': {'pending_teams': new_team.id}}
+            )
+
+        # add team id to user who created the team automatically
+        request.app.db['users'].update_one(
+            {'_id': new_team.users[0]},
+            {'$push': {'teams': new_team.id}}
+        )
+
+    except Exception as e:
+        logger.error(e)
+        return JSONResponse(content={'detail': 'we failed to invite users to the team, error: {e}'}, status_code=422)
