@@ -96,6 +96,10 @@ class PendingUser(BaseModel):
         },
     }
     
+# CALENDAR TYPES CAN BE THE FOLLOWING:
+    # PERSONAL - EACH USER HAS ONE
+    # TEAM - JUST A CALENDAR CREATED BY ANY USER THAT THEY CAN INVITE OTHERS TO
+    # TEAM-CALENDAR - DEFAULT CALENDAR THAT IS CREATED TO PAR WITH EACH CREATED TEAM
 
 class Calendar(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
@@ -108,6 +112,7 @@ class Calendar(BaseModel):
     events: List[Event] = Field(default_factory=list)
     name: str = Field(default_factory=str)
     pending_users: List[PendingUser] = Field(default_factory=list)
+    team_id: str = Field(default_factory=str) # only needed for team-calendar instance's, see notes above for details
     view_only_users: list = Field(default_factory=list)
 
 
@@ -118,13 +123,17 @@ class Calendar(BaseModel):
         name: str,
         user_id: PyObjectId,
         pending_users: List[PendingUser] = [],
+        team_id=None,
         *args, 
         **kwargs
       ):
           super().__init__(*args, **kwargs)
 
-          if calendar_type == 'team':
+          if calendar_type == 'team' or 'team-calendar':
               self.pending_users = pending_users
+
+          if calendar_type == 'team-calendar':
+              self.team_id = team_id
 
           self.authorized_users.append(user_id)
           self.calendar_color = calendar_color

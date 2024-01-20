@@ -20,6 +20,15 @@ class UserRef(BaseModel):
     company: str
     user_id: str = Field(default_factory=str)
 
+    def to_dict(self):
+        return {
+            'first_name': self.first_name,
+            'last_name': self.last_name,
+            'job_title': self.job_title,
+            'company': self.company,
+            'user_id': self.user_id
+        }
+
 class Team(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     calendar: str = Field(default_factory=str)
@@ -29,7 +38,7 @@ class Team(BaseModel):
     notifications: List[str] = Field(default_factory=list)
     tasks: List[str] = Field(default_factory=list)
     team_color: str
-    team_lead: Optional[UserRef] = Field(default_factory=str)
+    team_lead: None | UserRef = Field(default_factory=None)
     users: List[UserRef] = Field(default_factory=list)
     pending_users: List[UserRef] = Field(default_factory=list)
 
