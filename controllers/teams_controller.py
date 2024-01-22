@@ -23,7 +23,7 @@ async def create_team(request: Request):
         team_color=new_team.team_color,
         team_name=new_team.name,
         pending_users=new_team.pending_users,
-        creator_user_id=new_team.users[0].user_id,
+        creator_user_id=new_team.users[0],
     )
 
     if isinstance(calendar, JSONResponse):
@@ -59,15 +59,7 @@ def create_team_object(request_body: object):
             team_color=team_color,
             team_lead=None,
             pending_users=converted_team_members,
-            users=[
-                UserRef(
-                    first_name=team_creator['first_name'],
-                    last_name=team_creator['last_name'],
-                    job_title=team_creator['job_title'],
-                    company=team_creator['company'],
-                    user_id=team_creator['user_id'],
-                ),
-            ],
+            users=[team_creator['user_id']],
         )
 
         return new_team
@@ -81,14 +73,7 @@ def build_team_member_objects(team_members: []):
 
     for member in team_members:
         try:
-            user = UserRef(
-                first_name=member['user']['first_name'],
-                last_name=member['user']['last_name'],
-                job_title=member['user']['job_title'],
-                company=member['user']['company'],
-                user_id=member['user']['_id'],
-            )
-            member_array.append(user)
+            member_array.append(member['user']['_id'])
         except Exception as e:
             logger.error(e)
             return JSONResponse(content={'detail': f'we failed to add a user as a team member, error: {e}'}, status_code=422)
@@ -126,7 +111,7 @@ def convert_user_ref_list_to_pending_calendar_users_list(pending_users: list[Use
     for pending_user in pending_users:
         converted_user = PendingUser(
             type='authorized',
-            user_id=pending_user.user_id,
+            user_id=pending_user,
         )
         converted_pending_users.append(converted_user)
 
@@ -145,7 +130,7 @@ async def upload_team_and_team_calendar_to_db(request: Request, new_team: Team, 
         if isinstance(invite_calendar_users, JSONResponse):
             return invite_calendar_users
                 
-        upload_team = request.app.db['teams'].insert_one(new_team.encode_team_for_upload())
+        upload_team = request.app.db['teams'].insert_one(jsonable_encoder(new_team))
 
         if upload_team is None:
             return JSONResponse(content={'detail': 'failed to upload team'}, status_code=422)
@@ -168,14 +153,14 @@ async def upload_team_and_team_calendar_to_db(request: Request, new_team: Team, 
 async def invite_users_to_team_calendar(request: Request, calendar: Calendar):
     users_to_invite: list[str] = []
 
-    for pending_user in calendar.pending_users:
-        users_to_invite.append(pending_user.user_id)
+    for user in calendar.pending_users:
+        users_to_invite.append(user.user_id)
 
     try:
         # add calendar as a pending one for each invited user
-        async for user_id in request.app.db['users'].find({'_id': {'$in': users_to_invite}}):
+        async for user in request.app.db['users'].find({'_id': {'$in': users_to_invite}}):
             request.app.db['users'].update_one(
-                {'_id': user_id},
+                {'_id': user['_id']},
                 {'$push': {'pending_calendars': str(calendar.id)}}
             )
 
@@ -191,17 +176,11 @@ async def invite_users_to_team_calendar(request: Request, calendar: Calendar):
     
 
 async def invite_users_to_team(request: Request, new_team: Team):
-    users_to_invite: list[str] = []
-    merged_user_lists = new_team.users + new_team.pending_users
-
-    for user in merged_user_lists:
-        users_to_invite.append(user.user_id)
-
     try:
         # add team_id to pending teams array for every invited user
-        async for user_id in request.app.db['users'].find({'_id': {'$in': users_to_invite}}):
+        async for user in request.app.db['users'].find({'_id': {'$in': new_team.pending_users}}):
             request.app.db['users'].update_one(
-                {'_id': user_id},
+                {'_id': user['_id']},
                 {'$push': {'pending_teams': str(new_team.id)}}
             )
 

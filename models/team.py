@@ -39,32 +39,11 @@ class Team(BaseModel):
     tasks: List[str] = Field(default_factory=list)
     team_color: str
     team_lead: None | UserRef = Field(default_factory=None)
-    users: List[UserRef] = Field(default_factory=list)
-    pending_users: List[UserRef] = Field(default_factory=list)
+    users: List[str] = Field(default_factory=list)
+    pending_users: List[str] = Field(default_factory=list)
 
     def add_team_calendar(self, calendar_id: str):
         self.calendar = calendar_id
-
-    def encode_team_for_upload(self):
-        users_dicts = [user.to_dict() for user in self.users]
-        pending_users_dicts = [user.to_dict() for user in self.pending_users]
-
-        # convert team lead if present
-        team_lead_dict = self.team_lead.to_dict() if self.team_lead else None
-
-        return {
-            'id': self.id,
-            'calendar': self.calendar,
-            'description': self.description,
-            'name': self.name,
-            'notes': self.notes,
-            'notifications': self.notifications,
-            'tasks': self.tasks,
-            'team_color': self.team_color,
-            'team_lead': team_lead_dict,
-            'users': users_dicts,
-            'pending_users': pending_users_dicts
-        }
 
     model_config = {
         "populate_by_name": True,
