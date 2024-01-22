@@ -92,11 +92,12 @@ async def user_login(request: Request, user_login: UserLogin):
         bearer_token = encode_bearer_token(user_login)
         refresh_token = encode_refresh_token(user_lookup['_id'])
 
+
         response = JSONResponse({
             "message": "You have been successfully logged in",
             "status": True,
-            "user": user_response,
-        })
+            "user": jsonable_encoder(user_response),
+        }, status_code=200)
 
         response.headers["Authorization"] = f"Bearer {bearer_token}"
         response.set_cookie("refresh_token", refresh_token, httponly=True, secure=True, samesite="Lax")
@@ -107,5 +108,5 @@ async def user_login(request: Request, user_login: UserLogin):
     except Exception as e:
         return {
             "detail": "There was a server error processing your request",
-            "errors": e,
+            "errors": f"{e}",
         }

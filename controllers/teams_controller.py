@@ -176,13 +176,13 @@ async def invite_users_to_team_calendar(request: Request, calendar: Calendar):
         async for user_id in request.app.db['users'].find({'_id': {'$in': users_to_invite}}):
             request.app.db['users'].update_one(
                 {'_id': user_id},
-                {'$push': {'pending_calendars': calendar.id}}
+                {'$push': {'pending_calendars': str(calendar.id)}}
             )
 
         # user who created teh calendar should have it automatically added as an approved calendar
         request.app.db['users'].update_one(
             {'_id': calendar.authorized_users[0]},
-            {'$push': {'calendars': calendar.id}}
+            {'$push': {'calendars': str(calendar.id)}}
         )
         return
     except Exception as e:
@@ -202,13 +202,13 @@ async def invite_users_to_team(request: Request, new_team: Team):
         async for user_id in request.app.db['users'].find({'_id': {'$in': users_to_invite}}):
             request.app.db['users'].update_one(
                 {'_id': user_id},
-                {'$push': {'pending_teams': new_team.id}}
+                {'$push': {'pending_teams': str(new_team.id)}}
             )
 
         # add team id to user who created the team automatically
         request.app.db['users'].update_one(
             {'_id': new_team.users[0]},
-            {'$push': {'teams': new_team.id}}
+            {'$push': {'teams': str(new_team.id)}}
         )
 
     except Exception as e:
