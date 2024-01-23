@@ -193,3 +193,35 @@ async def invite_users_to_team(request: Request, new_team: Team):
     except Exception as e:
         logger.error(e)
         return JSONResponse(content={'detail': 'we failed to invite users to the team, error: {e}'}, status_code=422)
+    
+
+async def get_user_team_data(request: Request, user_email: str):
+    user = await request.app.db['users'].find_one(
+        {'email': user_email},
+        projection={
+            'teams': 1,
+            'pending_teams': 1,
+        }
+    )
+
+    if user is None:
+        return JSONResponse(content={'detail': 'there was an issue accessing your account'}, status_code=404)
+    
+    team_data = await fetch_user_team_data(request, user['teams'], user['pending_teams'])
+
+
+async def fetch_user_team_data(request: Request, team_ids: list[str], pending_team_ids: list[str]):
+    teams: list[Team] = []
+    pending_teams: list[Team] = []
+
+    retrieved_teams = await request.app.db['teams'].find(
+        {'_id': {'$in': team_ids}}
+    ).to_list(None)
+    retrieved_pending_teams = await request.app.db['teams'].find(
+        {'_id': {'$in': pending_team_ids}}
+    ).to_list(None)
+
+    if retrieved_teams is None or retrieved_pending_teams is None:
+        return JSONResponse(content={'detail': 'failed to retrieve team data'}, status_code=404)
+
+    print(retrieved_teams, retrieved_pending_teams)

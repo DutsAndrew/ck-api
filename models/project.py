@@ -20,7 +20,7 @@ class Project(BaseModel):
     completed_tasks: Optional[List[PyObjectId]] = Field(default_factory=list)
     deadline: datetime = Field(required=True)
     name: str = Field(required=True)
-    uncompleted_tasks: Optional[List[PyObjectId]] = Field(default_factory=list)
+    tasks: List[str] = Field(default_factory=list)
 
     @property
     def behind_schedule(self):
@@ -50,14 +50,8 @@ class Project(BaseModel):
     model_config = {
         "populate_by_name": True,
         "arbitrary_types_allowed": True,
-        "json_encoders": {ObjectId: str, PyObjectId: str},
-        "json_schema_extra": {
-            "example": {
-              "completed": False,
-              "completed_tasks": [str(ObjectId()), str(ObjectId())],
-              "deadline": "2023-07-27 13:27:25.303335",
-              "name": "Build the Eiffel Tower",
-              "uncompleted_tasks": [str(ObjectId()), str(ObjectId())],
-            }
-        }
+        "json_encoders": {
+            ObjectId: str, 
+            PyObjectId: str
+        },
     }

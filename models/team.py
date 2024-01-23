@@ -36,7 +36,7 @@ class Team(BaseModel):
     name: str
     notes: List[str] = Field(default_factory=list)
     notifications: List[str] = Field(default_factory=list)
-    tasks: List[str] = Field(default_factory=list)
+    projects: List[str] = Field(default_factory=list)
     team_color: str
     team_lead: None | UserRef = Field(default_factory=None)
     users: List[str] = Field(default_factory=list)

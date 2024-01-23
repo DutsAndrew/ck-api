@@ -15,3 +15,8 @@ async def get_welcome():
 @teams_router.post('/createTeam')
 async def post_team(request: Request, token: str | bool = Depends(process_bearer_token)):
     return await teams_controller.create_team(request=request)
+
+
+@teams_router.get('/getUserTeams')
+async def get_user_teams(request: Request, token: str | bool = Depends(process_bearer_token)):
+    return await teams_controller.get_user_team_data(request, token['email'])
