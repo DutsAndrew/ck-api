@@ -35,12 +35,15 @@ async def create_team(request: Request):
     
     new_team.add_team_calendar(calendar_id=str(calendar.id))
 
-    uploaded_objects = await upload_team_and_team_calendar_to_db(request, new_team, calendar)
+    uploaded_and_populated_team = await upload_team_and_team_calendar_to_db(request, new_team, calendar)
 
-    if isinstance(uploaded_objects, JSONResponse):
-        return uploaded_objects
+    if isinstance(uploaded_and_populated_team, JSONResponse):
+        return uploaded_and_populated_team
 
-    return JSONResponse(content={'detail': 'Success! We uploaded your team, invited users, and added a team calendar!'}, status_code=200)
+    return JSONResponse(content={
+        'detail': 'Success! We uploaded your team, invited users, and added a team calendar!',
+        'team': jsonable_encoder(uploaded_and_populated_team),
+    }, status_code=200)
 
 
 
@@ -124,7 +127,7 @@ def convert_user_ref_list_to_pending_calendar_users_list(pending_users: list[Use
 
 async def upload_team_and_team_calendar_to_db(request: Request, new_team: Team, calendar: Calendar):
     try:
-        upload_calendar = request.app.db['calendars'].insert_one(jsonable_encoder(calendar))
+        upload_calendar = await request.app.db['calendars'].insert_one(jsonable_encoder(calendar))
 
         if upload_calendar is None:
             return JSONResponse(content={'detail': 'failed to upload calendar'}, status_code=422)
@@ -134,7 +137,7 @@ async def upload_team_and_team_calendar_to_db(request: Request, new_team: Team, 
         if isinstance(invite_calendar_users, JSONResponse):
             return invite_calendar_users
                 
-        upload_team = request.app.db['teams'].insert_one(jsonable_encoder(new_team))
+        upload_team = await request.app.db['teams'].insert_one(jsonable_encoder(new_team))
 
         if upload_team is None:
             return JSONResponse(content={'detail': 'failed to upload team'}, status_code=422)
@@ -143,11 +146,15 @@ async def upload_team_and_team_calendar_to_db(request: Request, new_team: Team, 
 
         if isinstance(invite_team_users, JSONResponse):
             return invite_team_users
+        
+        fetched_team = await request.app.db['teams'].find_one({'_id': upload_team.inserted_id})
 
-        return {
-            upload_calendar,
-            upload_team,
-        }
+        if fetched_team is None:
+            return JSONResponse(content={'detail': 'failed to retrieve created team'}, status_code=404)
+        
+        populated_team = await populate_team(request=request, team=fetched_team)
+
+        return populated_team
         
     except Exception as e:
         logger.error(e)
