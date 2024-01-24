@@ -3,6 +3,9 @@ from fastapi.responses import JSONResponse
 from models.team import Team
 from models.team import UserRef
 from models.calendar import Calendar, PendingUser
+from models.project import Project
+from models.note import Note
+from models.notification import Notification
 from fastapi.encoders import jsonable_encoder
 from scripts.json_parser import json_parser
 import logging
@@ -211,17 +214,111 @@ async def get_user_team_data(request: Request, user_email: str):
 
 
 async def fetch_user_team_data(request: Request, team_ids: list[str], pending_team_ids: list[str]):
-    teams: list[Team] = []
-    pending_teams: list[Team] = []
+    # fetch all team refs attached to user
+    try:
+        retrieved_teams = await request.app.db['teams'].find(
+            {'_id': {'$in': team_ids}}
+        ).to_list(None)
+        retrieved_pending_teams = await request.app.db['teams'].find(
+            {'_id': {'$in': pending_team_ids}}
+        ).to_list(None)
 
-    retrieved_teams = await request.app.db['teams'].find(
-        {'_id': {'$in': team_ids}}
-    ).to_list(None)
-    retrieved_pending_teams = await request.app.db['teams'].find(
-        {'_id': {'$in': pending_team_ids}}
-    ).to_list(None)
+        if retrieved_teams is None or retrieved_pending_teams is None:
+            return JSONResponse(content={'detail': 'failed to retrieve team data'}, status_code=404)
 
-    if retrieved_teams is None or retrieved_pending_teams is None:
-        return JSONResponse(content={'detail': 'failed to retrieve team data'}, status_code=404)
+        # populate each team fully
+        populated_teams = await populate_teams(request, retrieved_teams)
+        populated_pending_teams = await populate_teams(request, retrieved_pending_teams)
 
-    print(retrieved_teams, retrieved_pending_teams)
+        if isinstance(populated_teams, JSONResponse):
+            return populate_team
+        if isinstance(populated_pending_teams, JSONResponse):
+            return populated_pending_teams
+        
+        print(populated_teams)
+        print(populated_pending_teams)
+        
+        return JSONResponse(content={
+            'detail': 'Success! We populated all of your team data',
+            'teams': jsonable_encoder(populated_teams),
+            'pending_teams': jsonable_encoder(populated_pending_teams),
+        }, status_code=200)
+    
+    except Exception as e:
+        logger.error(msg=f"{e}")
+        return JSONResponse(content={'detail': 'we failed to retrieve your team data'}, status_code=422)
+
+
+async def populate_teams(request: Request, teams_to_populate: list[Team]):
+    for i, team in enumerate(teams_to_populate):
+        
+        populated_team = await populate_team(request, team)
+        if isinstance(populated_team, JSONResponse):
+            return populated_team
+        
+        teams_to_populate[i] = populated_team
+
+    return teams_to_populate
+    
+
+async def populate_team(request, team: Team): 
+    user_projection = {
+        'first_name': 1,
+        'last_name': 1,
+        'email': 1,
+        'job_title': 1,
+        'company': 1,
+        '_id': 1,
+    }
+
+     # Individual try-except blocks for each query
+    try:
+        calendar = await request.app.db['calendars'].find_one({'_id': team['calendar']})
+        # LINK IN POPULATE CALENDAR FUNCTION FROM CALENDARS APP TO POPULATE CALENDAR FULLY
+        team['calendar'] = calendar
+    except Exception as e:
+        logger.error(f"Failed to retrieve calendar: {e}")
+
+    try:
+        retrieved_users = await request.app.db['users'].find(
+            {'_id': {'$in': team['users']}}, 
+            projection=user_projection
+        ).to_list(None)
+        team['users'] = retrieved_users
+    except Exception as e:
+        logger.error(f"Failed to retrieve users: {e}")
+
+    try:
+        retrieved_pending_users = await request.app.db['users'].find(
+            {'_id': {'$in': team['pending_users']}},
+            projection=user_projection
+        ).to_list(None)
+        team['pending_users'] = retrieved_pending_users
+    except Exception as e:
+        logger.error(f"Failed to retrieve pending users: {e}")
+
+    try:
+        retrieved_projects = await request.app.db['projects'].find(
+            {'_id': {'$in': team['projects']}}
+        ).to_list(None)
+        team['projects'] = retrieved_projects
+    except Exception as e:
+        logger.error(f"Failed to retrieve projects: {e}")
+
+    try:
+        retrieved_notes = await request.app.db['notes'].find(
+            {'_id': {'$in': team['notes']}}
+        ).to_list(None)
+        team['notes'] = retrieved_notes
+    except Exception as e:
+        logger.error(f"Failed to retrieve notes: {e}")
+
+    try:
+        retrieved_notifications = await request.app.db['notifications'].find(
+            {'_id': {'$in': team['notifications']}}
+        ).to_list(None)
+        team['notifications'] = retrieved_notifications
+    except Exception as e:
+        logger.error(f"Failed to retrieve notifications: {e}")
+
+    return team
