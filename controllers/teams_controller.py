@@ -6,6 +6,7 @@ from models.calendar import Calendar, PendingUser
 from models.project import Project
 from models.note import Note
 from models.notification import Notification
+from controllers.calendar_controller import populate_one_calendar
 from fastapi.encoders import jsonable_encoder
 from scripts.json_parser import json_parser
 import logging
@@ -199,28 +200,24 @@ async def invite_users_to_team(request: Request, new_team: Team):
     
 
 async def get_user_team_data(request: Request, user_email: str):
-    user = await request.app.db['users'].find_one(
-        {'email': user_email},
-        projection={
-            'teams': 1,
-            'pending_teams': 1,
-        }
-    )
-
-    if user is None:
-        return JSONResponse(content={'detail': 'there was an issue accessing your account'}, status_code=404)
-    
-    team_data = await fetch_user_team_data(request, user['teams'], user['pending_teams'])
-
-
-async def fetch_user_team_data(request: Request, team_ids: list[str], pending_team_ids: list[str]):
     # fetch all team refs attached to user
     try:
+        user = await request.app.db['users'].find_one(
+            {'email': user_email},
+            projection={
+                'teams': 1,
+                'pending_teams': 1,
+            }
+        )
+
+        if user is None:
+            return JSONResponse(content={'detail': 'there was an issue accessing your account'}, status_code=404)
+    
         retrieved_teams = await request.app.db['teams'].find(
-            {'_id': {'$in': team_ids}}
+            {'_id': {'$in': user['teams']}}
         ).to_list(None)
         retrieved_pending_teams = await request.app.db['teams'].find(
-            {'_id': {'$in': pending_team_ids}}
+            {'_id': {'$in': user['pending_teams']}}
         ).to_list(None)
 
         if retrieved_teams is None or retrieved_pending_teams is None:
@@ -234,9 +231,6 @@ async def fetch_user_team_data(request: Request, team_ids: list[str], pending_te
             return populate_team
         if isinstance(populated_pending_teams, JSONResponse):
             return populated_pending_teams
-        
-        print(populated_teams)
-        print(populated_pending_teams)
         
         return JSONResponse(content={
             'detail': 'Success! We populated all of your team data',
@@ -271,11 +265,10 @@ async def populate_team(request, team: Team):
         '_id': 1,
     }
 
-     # Individual try-except blocks for each query
     try:
         calendar = await request.app.db['calendars'].find_one({'_id': team['calendar']})
-        # LINK IN POPULATE CALENDAR FUNCTION FROM CALENDARS APP TO POPULATE CALENDAR FULLY
-        team['calendar'] = calendar
+        populated_calendar = await populate_one_calendar(request=request, calendar_id=team['calendar'])
+        team['calendar'] = populated_calendar if populated_calendar is not None else calendar
     except Exception as e:
         logger.error(f"Failed to retrieve calendar: {e}")
 
