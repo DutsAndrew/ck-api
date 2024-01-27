@@ -220,9 +220,31 @@ async def get_user_team_data(request: Request, user_email: str):
         if user is None:
             return JSONResponse(content={'detail': 'there was an issue accessing your account'}, status_code=404)
     
-        retrieved_teams = await request.app.db['teams'].find(
-            {'_id': {'$in': user['teams']}}
-        ).to_list(None)
+        # matches users in user['teams]
+        # adds field to keep index of original array
+        # sorts by index of array
+        # removes order field
+        retrieved_teams = await request.app.db['teams'].aggregate([
+            {
+                '$match': {
+                    '_id': {'$in': user['teams']}
+                }
+            },
+            {
+                '$addFields': {
+                    '__order': {
+                        '$indexOfArray': [user['teams'], '$_id']
+                    }
+                }
+            },
+            {
+                '$sort': {'__order': 1}
+            },
+            {
+                '$project': {'__order': 0}
+            }
+        ]).to_list(None)
+
         retrieved_pending_teams = await request.app.db['teams'].find(
             {'_id': {'$in': user['pending_teams']}}
         ).to_list(None)
@@ -322,3 +344,79 @@ async def populate_team(request, team: Team):
         logger.error(f"Failed to retrieve notifications: {e}")
 
     return team
+
+
+async def reorder_teams_list(request: Request, user_email: str):
+    try:
+        user = await request.app.db['users'].find_one(
+            {'email': user_email},
+            projection={
+                'teams': 1,
+                'id': 1,
+            }
+        )
+
+        if user is None:
+            return JSONResponse(content={'detail': 'there was an issue accessing your account'}, status_code=404)
+        
+        body = await json_parser(request=request)
+
+        if sorted(user['teams']) != sorted(body):
+            return JSONResponse(content={'detail': 'team lists were not the same'}, status_code=422)
+        
+        update_user = await update_user_team_list_order(request, body, user['_id'])
+
+        if isinstance(update_user, JSONResponse):
+            return update_user
+
+        # matches users in user['teams]
+        # adds field to keep index of original array
+        # sorts by index of array
+        # removes order field
+        retrieved_teams = await request.app.db['teams'].aggregate([
+            {
+                '$match': {
+                    '_id': {'$in': body}
+                }
+            },
+            {
+                '$addFields': {
+                    '__order': {
+                        '$indexOfArray': [body, '$_id']
+                    }
+                }
+            },
+            {
+                '$sort': {'__order': 1}
+            },
+            {
+                '$project': {'__order': 0}
+            }
+        ]).to_list(None)
+
+        populated_teams = await populate_teams(request=request, teams_to_populate=retrieved_teams)
+
+        if isinstance(populated_teams, JSONResponse):
+            return populated_teams
+                
+        return JSONResponse(content={
+            'detail': 'Success! We reordered your teams!',
+            'teams': populated_teams,
+        }, status_code=200)
+
+  
+    except Exception as e:
+        logger.error(f'{e}')
+        return JSONResponse(content={'detail': 'failed to access server to reorder list'}, status_code=422)
+    
+
+async def update_user_team_list_order(request: Request, updated_list: list[str], user_id: str):
+    updated_user = await request.app.db['users'].update_one(
+        {'_id': user_id},
+        {'$set': {'teams': updated_list}}
+    )
+
+    if updated_user is None:
+        return JSONResponse(content={'detail': 'we failed to updated the users team list'}, status_code=422)
+
+    return updated_user
