@@ -16,6 +16,7 @@ from routes.jenkins_ai_routes import jenkins_ai_router
 from routes.messaging_routes import messaging_router
 from routes.notes_routes import notes_router
 from routes.pages_routes import pages_router
+from routes.projects_routes import projects_router
 from routes.tasks_routes import tasks_router
 from routes.teams_routes import teams_router
 from routes.users_routes import users_router
@@ -96,6 +97,7 @@ app.include_router(jenkins_ai_router, tags=["jenkins-ai"], prefix="/jenkins-ai")
 app.include_router(messaging_router, tags=["message"], prefix="/message")
 app.include_router(notes_router, tags=["note"], prefix="/note")
 app.include_router(pages_router, tags=["page"], prefix="/page")
+app.include_router(projects_router, tags=["projects"], prefix="/project")
 app.include_router(tasks_router, tags=["task"], prefix="/task")
 app.include_router(teams_router, tags=["team"], prefix="/team")
 app.include_router(users_router, tags=["users"], prefix="/users")
