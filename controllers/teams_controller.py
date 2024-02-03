@@ -350,21 +350,19 @@ async def reorder_teams_list(request: Request, user_email: str):
             return update_user
 
         # keep teams in order, as order matters on client
-        retrieved_teams = await request.app.db['teams'].aggregate([
-            {'$match': {'_id': {'$in': user['teams']}}},
-            {'$addFields': {'__order': {'$indexOfArray': [user['teams'], '$_id']}}},
-            {'$sort': {'__order': 1}},
-            {'$project': {'__order': 0}}
-        ]).to_list(None)
+        retrieved_teams = await request.app.db['teams'].find(
+            {'_id': {'$in': user['teams']}}
+        ).to_list(None)
 
         populated_teams = await populate_teams(request=request, teams=retrieved_teams)
+        ordered_teams = order_teams(ordered_team_id_list=user['teams'], retrieved_teams=retrieved_teams)
 
         if isinstance(populated_teams, JSONResponse):
             return populated_teams
                 
         return JSONResponse(content={
             'detail': 'Success! We reordered your teams!',
-            'teams': populated_teams,
+            'teams': jsonable_encoder(ordered_teams),
         }, status_code=200)
 
   
