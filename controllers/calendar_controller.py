@@ -7,6 +7,7 @@ from pydantic import ValidationError
 from datetime import datetime
 from scripts.json_parser import json_parser
 import logging
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -90,8 +91,10 @@ async def populate_all_team_calendars(request, user):
     calendar_ids = [str(calendar_id) for calendar_id in user['calendars']]
     pending_calendar_ids = [str(calendar_id) for calendar_id in user['pending_calendars']]
     
-    calendars = await populate_individual_calendars(request, calendar_ids)
-    pending_calendars = await populate_individual_calendars(request, pending_calendar_ids)
+    calendars, pending_calendars = await asyncio.gather(
+        populate_individual_calendars(request=request, calendar_ids=calendar_ids),
+        populate_individual_calendars(request=request, calendar_ids=pending_calendar_ids)
+    )
 
     return {
         'calendars': calendars,
@@ -134,20 +137,12 @@ async def populate_individual_calendars(request: Request, calendar_ids: list[str
     }
 
     # POPULATE ALL USER INSTANCES USING THE USER REFS
-    authorized_users = await request.app.db['users'].find({
-        '_id': {'$in': list(authorized_user_ids)}},
-        projection=user_projection
-    ).to_list(None)
-    view_only_users = await request.app.db['users'].find({
-        '_id': {'$in': list(view_only_user_ids)}},
-        projection=user_projection
-    ).to_list(None)
-    calendar_notes = await request.app.db['calendar_notes'].find({
-        '_id': {'$in': list(calendar_notes_ids)}},
-    ).to_list(None)
-    events = await request.app.db['events'].find({
-        '_id': {'$in': list(event_ids)},
-    }).to_list(None)
+    authorized_users, view_only_users, calendar_notes, events = await asyncio.gather(
+        request.app.db['users'].find({'_id': {'$in': list(authorized_user_ids)}}, projection=user_projection).to_list(None),
+        request.app.db['users'].find({'_id': {'$in': list(view_only_user_ids)}}, projection=user_projection).to_list(None),
+        request.app.db['calendar_notes'].find({'_id': {'$in': list(calendar_notes_ids)}}).to_list(None),
+        request.app.db['events'].find({'_id': {'$in': list(event_ids)}}).to_list(None)
+    )
 
     # CREATE DICT WITH USER REF TIED TO USER INSTANCE
     calendar_authorized_users_dict = {str(user['_id']): user for user in authorized_users}

@@ -10,8 +10,14 @@ from controllers.calendar_controller import populate_one_calendar
 from fastapi.encoders import jsonable_encoder
 from scripts.json_parser import json_parser
 import logging
+import asyncio
 
 logger = logging.getLogger(__name__)
+
+
+def order_teams(ordered_team_id_list: list[str], retrieved_teams: list[Team]):
+    # ordered_team_id_list must be the un-populated id list of user['teams']
+    return sorted(retrieved_teams, key=lambda team: ordered_team_id_list.index(team['_id']))
 
 
 async def create_team(request: Request):
@@ -220,30 +226,10 @@ async def get_user_team_data(request: Request, user_email: str):
         if user is None:
             return JSONResponse(content={'detail': 'there was an issue accessing your account'}, status_code=404)
     
-        # matches users in user['teams]
-        # adds field to keep index of original array
-        # sorts by index of array
-        # removes order field
-        retrieved_teams = await request.app.db['teams'].aggregate([
-            {
-                '$match': {
-                    '_id': {'$in': user['teams']}
-                }
-            },
-            {
-                '$addFields': {
-                    '__order': {
-                        '$indexOfArray': [user['teams'], '$_id']
-                    }
-                }
-            },
-            {
-                '$sort': {'__order': 1}
-            },
-            {
-                '$project': {'__order': 0}
-            }
-        ]).to_list(None)
+        # keep teams in order, as order matters on client
+        retrieved_teams = await request.app.db['teams'].find(
+            {'_id': {'$in': user['teams']}}
+        ).to_list(None)
 
         retrieved_pending_teams = await request.app.db['teams'].find(
             {'_id': {'$in': user['pending_teams']}}
@@ -256,6 +242,8 @@ async def get_user_team_data(request: Request, user_email: str):
         populated_teams = await populate_teams(request, retrieved_teams)
         populated_pending_teams = await populate_teams(request, retrieved_pending_teams)
 
+        ordered_teams = order_teams(ordered_team_id_list=user['teams'], retrieved_teams=retrieved_teams)
+
         if isinstance(populated_teams, JSONResponse):
             return populate_team
         if isinstance(populated_pending_teams, JSONResponse):
@@ -263,7 +251,7 @@ async def get_user_team_data(request: Request, user_email: str):
         
         return JSONResponse(content={
             'detail': 'Success! We populated all of your team data',
-            'teams': jsonable_encoder(populated_teams),
+            'teams': jsonable_encoder(ordered_teams),
             'pending_teams': jsonable_encoder(populated_pending_teams),
         }, status_code=200)
     
@@ -272,16 +260,8 @@ async def get_user_team_data(request: Request, user_email: str):
         return JSONResponse(content={'detail': 'we failed to retrieve your team data'}, status_code=422)
 
 
-async def populate_teams(request: Request, teams_to_populate: list[Team]):
-    for i, team in enumerate(teams_to_populate):
-        
-        populated_team = await populate_team(request, team)
-        if isinstance(populated_team, JSONResponse):
-            return populated_team
-        
-        teams_to_populate[i] = populated_team
-
-    return teams_to_populate
+async def populate_teams(request: Request, teams: list[Team]):
+    return await asyncio.gather(*[populate_team(request=request, team=team) for team in teams])
     
 
 async def populate_team(request, team: Team): 
@@ -369,32 +349,15 @@ async def reorder_teams_list(request: Request, user_email: str):
         if isinstance(update_user, JSONResponse):
             return update_user
 
-        # matches users in user['teams]
-        # adds field to keep index of original array
-        # sorts by index of array
-        # removes order field
+        # keep teams in order, as order matters on client
         retrieved_teams = await request.app.db['teams'].aggregate([
-            {
-                '$match': {
-                    '_id': {'$in': body}
-                }
-            },
-            {
-                '$addFields': {
-                    '__order': {
-                        '$indexOfArray': [body, '$_id']
-                    }
-                }
-            },
-            {
-                '$sort': {'__order': 1}
-            },
-            {
-                '$project': {'__order': 0}
-            }
+            {'$match': {'_id': {'$in': user['teams']}}},
+            {'$addFields': {'__order': {'$indexOfArray': [user['teams'], '$_id']}}},
+            {'$sort': {'__order': 1}},
+            {'$project': {'__order': 0}}
         ]).to_list(None)
 
-        populated_teams = await populate_teams(request=request, teams_to_populate=retrieved_teams)
+        populated_teams = await populate_teams(request=request, teams=retrieved_teams)
 
         if isinstance(populated_teams, JSONResponse):
             return populated_teams
