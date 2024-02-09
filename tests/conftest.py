@@ -1,5 +1,6 @@
 import pytest
 import certifi
+import os
 from fastapi.testclient import TestClient
 from motor.motor_asyncio import AsyncIOMotorClient
 from main import app as main_app
@@ -12,8 +13,9 @@ def test_client():
 
 @pytest.fixture
 def test_client_with_db():
-    # Use AsyncIOMotorClient for in-memory MongoDB
-    config = dotenv_values(".env")
+    dotenv_path = os.path.join(os.path.dirname(__file__), "..", ".env")
+    config = dotenv_values(dotenv_path)
+    
     mongodb_client = AsyncIOMotorClient(config["DEV_MONGO_URI"], tlsCAFile=certifi.where())
     db = mongodb_client[config["DEV_DB_NAME"]]
 
@@ -24,3 +26,11 @@ def test_client_with_db():
     app = TestClient(main_app)
 
     return app
+
+
+# if async operations are needed use:
+  # import asyncio
+
+  # pytest_plugins = ('pytest_asyncio',)
+
+  # @pytest.mark.asyncio
