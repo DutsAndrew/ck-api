@@ -3,7 +3,11 @@ from pydantic import BaseModel, Field, validator
 from typing import List, Optional
 from models.bson_object_id import PyObjectId
 from bson import ObjectId
+from fastapi import Request, HTTPException
+from fastapi.responses import JSONResponse
+import logging
 
+logger = logging.getLogger(__name__)
 
 class UserRef(BaseModel):
     first_name: str

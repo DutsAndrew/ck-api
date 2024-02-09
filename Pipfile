@@ -68,6 +68,9 @@ hypothesmith = "*"
 holidays = "*"
 schedule = "*"
 fastapi-cache = {version = "*", extras = ["mongodb"]}
+pytest-mock = "*"
+asyncmock = "*"
+asynctest = "*"
 
 [dev-packages]
 jinja2 = ">=3.1.3"

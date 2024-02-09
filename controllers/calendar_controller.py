@@ -1,6 +1,7 @@
 from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
 from models.calendar import PendingUser, Calendar, CalendarNote, Event, UserRef
+from models.app_data import AppData
 from models.color_scheme import ColorScheme
 from fastapi.encoders import jsonable_encoder
 from pydantic import ValidationError
@@ -12,38 +13,15 @@ import asyncio
 logger = logging.getLogger(__name__)
 
 async def fetch_calendar_app_data(request: Request):
-    try:
-        calendar_data_lookup = await request.app.db['app-data'].find_one(
-            {"app_data_type": "calendar"}
-        )
+    calendar_app_data = await AppData.get_calendar_app_data(request)
 
-        if calendar_data_lookup is not None:
-            
-            converted_data = dict(calendar_data_lookup)
-            if "_id" in converted_data:
-                converted_data["_id"] = str(converted_data["_id"])
-
-            return JSONResponse(
-                content={
-                    'detail': 'Calendar Data Loaded',
-                    'data': converted_data,
-                },
-                status_code=200
-            )
-        else:
-            raise HTTPException(
-                status_code=404,
-                detail='Calendar data not found',
-            )
-        
-    except Exception as e:
-        logger.error(f"Error processing request: {e}")
-        return JSONResponse(
-            content={
-                'detail': 'There was an issue processing your request',
-            },
-            status_code=500
-        )
+    if isinstance(calendar_app_data, JSONResponse):
+        return calendar_app_data
+    
+    if isinstance(calendar_app_data, HTTPException):
+        return calendar_app_data
+    
+    return calendar_app_data
     
 
 async def fetch_all_user_calendar_data(request: Request, user_email: str):
