@@ -1,17 +1,10 @@
-from pydantic import BaseModel, Field
 from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
 import logging
 
 logger = logging.getLogger(__name__)
 
-class CalendarAppData(BaseModel):
-    calendar_dates: dict
-    holiday_dates: dict
-
-
-class AppData(BaseModel):
-    app_data_type: str = Field(default=str)
+class AppData():
 
     @staticmethod
     async def get_calendar_app_data(request: Request):

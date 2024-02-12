@@ -1,7 +1,8 @@
 from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
 from models.calendar import PendingUser, Calendar, CalendarNote, Event, UserRef
-from models.app_data import AppData
+from services.app_data_services import AppData
+from services.calendar_services import CalendarData
 from models.color_scheme import ColorScheme
 from fastapi.encoders import jsonable_encoder
 from pydantic import ValidationError
@@ -25,144 +26,22 @@ async def fetch_calendar_app_data(request: Request):
     
 
 async def fetch_all_user_calendar_data(request: Request, user_email: str):
-    try:
-        user = await request.app.db['users'].find_one(
-            {"email": user_email},
-            projection={
-                'calendars': 1,
-                'pending_calendars': 1,
-                'personal_calendar': 1,
-            },
-        )
+    user = await CalendarData.get_user_calendars(request, user_email)
 
-        if not user:
-            return JSONResponse(content={'detail': 'The account you are using does not exist'}, status_code=404)
-               
-        populated_calendars = await populate_all_team_calendars(request, user)
-        user['calendars'] = populated_calendars['calendars']
-        user['pending_calendars'] = populated_calendars['pending_calendars']
-        personal_calendar = await populate_one_calendar(request, calendar_id=user['personal_calendar'])
-        
-        if personal_calendar is None:
-            return JSONResponse(content={'detail': 'personal calendar could not be populated'}, status_code=422)
-        
-        user['personal_calendar'] = personal_calendar
-
-        return JSONResponse(
-            content={
-                'detail': 'All possible calendars fetched',
-                'updated_user': user,
-            }
-        )
-        
-    except Exception as e:
-        logger.error(f"Error processing request: {e}")
-        return JSONResponse(
-            content={
-                'detail': 'There was an issue processing your request',
-            },
-            status_code=500
-        )
+    if isinstance(user, JSONResponse):
+        return user
+            
+    user_with_populated_calendars = await CalendarData.fetch_all_user_calendars(request, user)
+            
+    if isinstance(user_with_populated_calendars, JSONResponse):
+        return JSONResponse(content={'detail': 'Failed to fetch all user calendars'}, status_code=422)
     
-
-async def populate_all_team_calendars(request, user):
-    calendar_ids = [str(calendar_id) for calendar_id in user['calendars']]
-    pending_calendar_ids = [str(calendar_id) for calendar_id in user['pending_calendars']]
-    
-    calendars, pending_calendars = await asyncio.gather(
-        populate_individual_calendars(request=request, calendar_ids=calendar_ids),
-        populate_individual_calendars(request=request, calendar_ids=pending_calendar_ids)
+    return JSONResponse(
+        content={
+            'detail': 'All possible calendars fetched',
+            'updated_user': user_with_populated_calendars,
+        }
     )
-
-    return {
-        'calendars': calendars,
-        'pending_calendars': pending_calendars,
-    }
-
-
-async def populate_individual_calendars(request: Request, calendar_ids: list[str]):
-    if len(calendar_ids) == 0: return []
-
-    calendars = []
-
-    authorized_user_ids = set()
-    pending_user_ids = set()
-    view_only_user_ids = set()
-    calendar_notes_ids = set()
-    event_ids = set()
-
-    # POPULATE ALL CALENDARS AND STORE ALL DB REFS
-    async for calendar in request.app.db['calendars'].find({
-        '_id': {'$in': calendar_ids}
-    }):
-        calendars.append(calendar)
-        authorized_user_ids.update(calendar.get('authorized_users', []))
-        view_only_user_ids.update(calendar.get('view_only_users', []))
-        calendar_notes_ids.update(calendar.get('calendar_notes', []))
-        event_ids.update(calendar.get('events', []))
-
-        for pending_user in calendar.get('pending_users', []):
-            user_id = pending_user.get('_id')
-            if user_id:
-                pending_user_ids.add(user_id)
-
-    user_projection = {
-        'first_name': 1,
-        'last_name': 1,
-        'email': 1,
-        'job_title': 1,
-        'company': 1,
-    }
-
-    # POPULATE ALL USER INSTANCES USING THE USER REFS
-    authorized_users, view_only_users, calendar_notes, events = await asyncio.gather(
-        request.app.db['users'].find({'_id': {'$in': list(authorized_user_ids)}}, projection=user_projection).to_list(None),
-        request.app.db['users'].find({'_id': {'$in': list(view_only_user_ids)}}, projection=user_projection).to_list(None),
-        request.app.db['calendar_notes'].find({'_id': {'$in': list(calendar_notes_ids)}}).to_list(None),
-        request.app.db['events'].find({'_id': {'$in': list(event_ids)}}).to_list(None)
-    )
-
-    # CREATE DICT WITH USER REF TIED TO USER INSTANCE
-    calendar_authorized_users_dict = {str(user['_id']): user for user in authorized_users}
-    calendar_view_only_users_dict = {str(user['_id']): user for user in view_only_users}
-
-    # LOOP THROUGH CALENDARS TO STORE USER INSTANCES IN EACH CALENDAR
-    for calendar in calendars:
-        authorized_user_ids = calendar.get('authorized_users', [])
-        view_only_user_ids = calendar.get('view_only_users', [])
-        pending_user_ids = [str(pending_user.get('_id')) for pending_user in calendar.get('pending_users', [])]
-
-        # WAIT TO FIND ALL PENDING USERS FOR EACH CALENDAR INDIVIDUALLY TO MAINTAIN DATA STRUCTURE NEEDED
-        pending_users = await request.app.db['users'].find({
-            '_id': {'$in': pending_user_ids}},
-            projection=user_projection
-        ).to_list(None)
-
-        # MERGE POPULATED PENDING USER INSTANCE WITH THE ORIGINAL PENDING OBJECT TYPE
-        pending_users_with_type = []
-        for pending_user in calendar.get('pending_users'):
-            matching_user = next((user for user in pending_users if user['_id'] == pending_user['_id']), None)
-            if matching_user:
-                combined_data = {
-                    'type': pending_user.get('type'),
-                    'user': matching_user  # Add the populated user instance
-                }
-                pending_users_with_type.append(combined_data)
-            else:
-                continue
-
-        # STORE ALL USERS TO THEIR RESPECTIVE CALENDAR
-        calendar['authorized_users'] = [
-            calendar_authorized_users_dict.get(str(user_id)) for user_id in authorized_user_ids
-        ]
-        calendar['pending_users'] = pending_users_with_type
-        calendar['view_only_users'] = [
-            calendar_view_only_users_dict.get(str(user_id)) for user_id in view_only_user_ids
-        ]
-        calendar['calendar_notes'] = [calendar_note for calendar_note in calendar_notes if calendar_note['calendar_id'] == calendar['_id']]
-        calendar['events'] = [event for event in events if event['calendar_id'] == calendar['_id']]
-
-    return calendars
     
 
 async def post_new_calendar(request: Request):
