@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 from models.calendar import PendingUser, Calendar, CalendarNote, Event, UserRef
 from services.app_data_services import AppData
 from services.calendar_services import CalendarData
+from services.service_helpers.calendar_service_helpers import CalendarDataHelper
 from models.color_scheme import ColorScheme
 from fastapi.encoders import jsonable_encoder
 from pydantic import ValidationError
@@ -45,104 +46,12 @@ async def fetch_all_user_calendar_data(request: Request, user_email: str):
     
 
 async def post_new_calendar(request: Request):
-    request_body = await json_parser(request=request)
+    new_calendar = CalendarData.create_new_calendar(request)
 
-    if isinstance(request_body, JSONResponse):
-        return request_body
-
-    calendar_color = request_body['calendarColor']
-    calendar_name = request_body['calendarName']
-    user_id = request_body['createdBy']
-    authorized_users = request_body['authorizedUsers']
-    view_only_users = request_body['viewOnlyUsers']
-    # if needed each user has email, first_name, last_name, job_title, and company listed
-
-    pending_users = compile_pending_users(authorized_users, view_only_users)
-
-    new_calendar = Calendar(
-        calendar_color=calendar_color,
-        calendar_type='team',
-        name=calendar_name,
-        user_id=user_id,
-        pending_users=pending_users
-    )
-
-    return await upload_new_calendar(request, new_calendar, pending_users, user_id)
-
-
-def compile_pending_users(authorized_users, view_only_users):
-    pending_users = []
-
-    # loop through and make all users in each list a pending user object for creating the calendar object
-    for user in authorized_users:
-        pending_user = PendingUser('authorized', user['user']['_id'])
-        pending_users.append(pending_user)
-
-    for user in view_only_users:
-        pending_user = PendingUser('view_only', user['user']['_id'])
-        pending_users.append(pending_user)
-
-    return pending_users
-
+    if isinstance(new_calendar, JSONResponse):
+        return new_calendar
     
-async def upload_new_calendar(request: Request, new_calendar: Calendar, pending_users, user_id: str):
-    try:
-        calendar_data = jsonable_encoder(new_calendar)
-        calendar_upload = await request.app.db['calendars'].insert_one(calendar_data)
-        calendar_id = str(calendar_upload.inserted_id)
-        uploaded_calendar = await request.app.db['calendars'].find_one({'_id': calendar_id})
-        updated_user_who_created_calendar = await request.app.db['users'].update_one(
-            {'_id': str(user_id)}, {'$push': {'calendars': calendar_id}})
-
-        if calendar_upload is None or uploaded_calendar is None or updated_user_who_created_calendar is None:
-            return JSONResponse(
-                content={'detail': 'Failed to save, retrieve, and update calendar to user'},
-                status_code=500
-            )
-
-        successful_users_updated = 0
-        unsuccessful_users_updated = 0
-
-        for user in pending_users:
-            update_user = await request.app.db['users'].find_one_and_update(
-                {"_id": user.user_id}, {"$push": {"pending_calendars": calendar_id}}
-            )
-
-            if update_user is not None:
-                successful_users_updated += 1
-            else:
-                unsuccessful_users_updated += 1
-
-        if unsuccessful_users_updated > 0:
-            return JSONResponse(
-                content={
-                    'detail': 'Calendar created, all users were not invited successfully, you may want to remove and re-invite users in the Calendar Editor to ensure all users are invited correctly',
-                    'calendar': uploaded_calendar,
-                },
-                status_code=200
-            )
-        
-        if successful_users_updated == len(pending_users) or (successful_users_updated == 0 and unsuccessful_users_updated == 0):
-            populated_calendar = await populate_one_calendar(request, calendar_id)
-            if populated_calendar is None:
-                return JSONResponse(content={'detail': 'Calendar was not able to be populated'}, status_code=422)
-            
-            return JSONResponse(
-                content={
-                    'detail': 'Calendar created and all necessary users added',
-                    'calendar': populated_calendar,
-                },
-                status_code=200
-            )
-        
-        return JSONResponse(content={'detail': 'Something went wrong'})
-
-    except Exception as e:
-        logger.error(f"Error processing request: {e}")
-        return JSONResponse(
-            content={'detail': 'There was an issue processing your request'},
-            status_code=500
-        )
+    return new_calendar
 
     
 async def remove_user_from_calendar(request: Request, calendar_id: str, user_type: str, user_id: str, user_making_request_email: str):
@@ -174,7 +83,7 @@ async def remove_user_from_calendar(request: Request, calendar_id: str, user_typ
             return JSONResponse(content={'detail': 'Failed to update calendar to remove user'}, status_code=422)
         
         # find updated calendar and populate all users on it before returning
-        updated_and_repopulated_calendar = await populate_one_calendar(request, calendar_id)
+        updated_and_repopulated_calendar = await CalendarDataHelper.populate_one_calendar(request, calendar_id)
 
         if updated_and_repopulated_calendar is None:
             return JSONResponse(content={'detail': 'Failed to refetch updated calendar with removed user'}, status_code=404)
@@ -218,82 +127,6 @@ def filter_out_user_from_calendar_list(user_id, calendar, user_type):
     return calendar
 
 
-async def populate_one_calendar(request: Request, calendar_id: str):
-    
-    calendar = None
-    
-    calendar = await request.app.db['calendars'].find_one({'_id': calendar_id})
-    
-    if calendar is None:
-        return None
-    
-    # set lists for storing ids for looking up in db
-    authorized_user_ids = list(calendar.get('authorized_users', []))
-    view_only_user_ids = list(calendar.get('view_only_users', []))
-    pending_user_ids = [] # pending users are nested, need to loop through and retrieve id below
-    calendar_note_ids = list(calendar.get('calendar_notes', []))
-    event_ids = list(calendar.get('events', []))
-
-    # pending users are nested, loop through to retrieve and store
-    for pending_user in calendar.get('pending_users', []):
-        user_id = pending_user.get('_id')
-        if user_id:
-            pending_user_ids.append(user_id)
-    
-    # entire user object should not be pulled, just grab these fields
-    user_projection = {
-        'first_name': 1,
-        'last_name': 1,
-        'email': 1,
-        'job_title': 1,
-        'company': 1,
-    }
-
-    # loop through and query ALL users for the following 3 lists
-    authorized_users = await request.app.db['users'].find({
-        '_id': {'$in': authorized_user_ids}},
-        projection=user_projection
-    ).to_list(None)
-    view_only_users = await request.app.db['users'].find({
-        '_id': {'$in': view_only_user_ids}},
-        projection=user_projection
-    ).to_list(None)
-    pending_users = await request.app.db['users'].find({
-        '_id': {'$in': pending_user_ids}},
-        projection=user_projection
-    ).to_list(None)
-    calendar_notes = await request.app.db['calendar_notes'].find({
-        '_id': {'$in': calendar_note_ids}
-    }).to_list(None)
-    events = await request.app.db['events'].find({
-        '_id': {'$in': event_ids}
-    }).to_list(None)
-
-    # if any list fails return early as None as an error
-    if authorized_users is None or view_only_users is None or pending_users is None or calendar_notes is None or events is None:
-        return None
-
-    # loop through and assign populated users back to their nested structure with type
-    pending_users_with_type = []
-    for pending_user in calendar.get('pending_users'):
-        matching_user = next((user for user in pending_users if user['_id'] == pending_user['_id']), None)
-        if matching_user:
-            combined_data = {
-                'type': pending_user.get('type'),
-                'user': matching_user
-            }
-            pending_users_with_type.append(combined_data)
-
-    # assign populated user objects back to calendar
-    calendar['authorized_users'] = authorized_users
-    calendar['view_only_users'] = view_only_users
-    calendar['pending_users'] = pending_users_with_type
-    calendar['calendar_notes'] = calendar_notes
-    calendar['events'] = events
-    
-    return calendar
-
-
 async def add_user_to_calendar(
         request: Request, 
         calendar_id: str, 
@@ -329,7 +162,7 @@ async def add_user_to_calendar(
           if not verify_user_was_added_to_calendar(updated_calendar, permission_type, user_id):
               return JSONResponse(content={'detail': 'User was not added to calendar successfully'}, status_code=422)
                     
-          populated_calendar = await populate_one_calendar(request, updated_calendar['_id'])
+          populated_calendar = await CalendarDataHelper.populate_one_calendar(request, updated_calendar['_id'])
           
           return JSONResponse(content={
               'detail': 'We successfully added user to your calendar',
@@ -611,7 +444,7 @@ async def add_note_to_calendar(
 
 
 async def retrieve_updated_calendar_with_new_note(request: Request, calendar_id: str):
-    calendar_with_updated_note = await populate_one_calendar(request, calendar_id)
+    calendar_with_updated_note = await CalendarDataHelper.populate_one_calendar(request, calendar_id)
 
     if calendar_with_updated_note is None:
         return JSONResponse(content={'detail': 'Failed to retrieve updated calendar with note'}, status_code=422)
@@ -760,7 +593,7 @@ async def delete_note(request: Request, calendar_id: str, calendar_note_id: str)
     if isinstance(note_removal_status, JSONResponse):
         return note_removal_status
     
-    populated_calendar = await populate_one_calendar(request, calendar_id=calendar_id)
+    populated_calendar = await CalendarDataHelper.populate_one_calendar(request, calendar_id=calendar_id)
 
     if populated_calendar is None:
         return JSONResponse(content={'detail': 'we failed to populate an updated calendar without the note, but the note was removed'}, status_code=422)
@@ -816,7 +649,7 @@ async def post_event(request: Request, calendar_id: str, user_making_request_ema
     if isinstance(uploaded_event, JSONResponse):
         return uploaded_event
     
-    updated_calendar = await populate_one_calendar(request, calendar_id)
+    updated_calendar = await CalendarDataHelper.populate_one_calendar(request, calendar_id)
 
     if updated_calendar is None:
         return JSONResponse(content={'detail': 'failed to retrieve populated calendar'}, status_code=422)
@@ -916,7 +749,7 @@ async def put_event(
         if isinstance(upload_updated_event, JSONResponse):
             return upload_updated_event
         
-        updated_calendar = await populate_one_calendar(request, calendar_id)
+        updated_calendar = await CalendarDataHelper.populate_one_calendar(request, calendar_id)
 
         if updated_calendar is None:
             return JSONResponse(content={'detail': 'there was an issue populating the calendar with the updated event'}, status_code=422)
@@ -992,7 +825,7 @@ async def delete_event(request: Request, calendar_id: str, event_id: str):
     if event_removal is None:
         return JSONResponse(content={'detail': 'failed to remove event'}, status_code=422)
 
-    updated_calendar = await populate_one_calendar(request, calendar_id)
+    updated_calendar = await CalendarDataHelper.populate_one_calendar(request, calendar_id)
 
     if updated_calendar is None:
         return JSONResponse(content={'detail': 'there was an issue populating the calendar with the removed event'}, status_code=422)
@@ -1033,7 +866,7 @@ async def update_user_permissions(
         if isinstance(user_permission_change_status, JSONResponse):
             return user_permission_change_status
         
-        repopulated_calendar = await populate_one_calendar(request, calendar_id)
+        repopulated_calendar = await CalendarDataHelper.populate_one_calendar(request, calendar_id)
 
         if repopulated_calendar is None:
             return JSONResponse(content={'detail': 'we failed to repopulate the calendar you requested to update'}, status_code=422)

@@ -6,7 +6,7 @@ from models.calendar import Calendar, PendingUser
 from models.project import Project
 from models.note import Note
 from models.notification import Notification
-from controllers.calendar_controller import populate_one_calendar
+from services.service_helpers.calendar_service_helpers import CalendarDataHelper
 from fastapi.encoders import jsonable_encoder
 from scripts.json_parser import json_parser
 import logging
@@ -81,7 +81,7 @@ def create_team_object(request_body: object):
         return JSONResponse(content={'detail': f"failed to create team instance, error: {e}"}, status_code=422)
 
 
-def build_team_member_objects(team_members: []):
+def build_team_member_objects(team_members):
     member_array = []
 
     for member in team_members:
@@ -276,7 +276,7 @@ async def populate_team(request, team: Team):
 
     try:
         calendar = await request.app.db['calendars'].find_one({'_id': team['calendar']})
-        populated_calendar = await populate_one_calendar(request=request, calendar_id=team['calendar'])
+        populated_calendar = await CalendarDataHelper.populate_one_calendar(request=request, calendar_id=team['calendar'])
         team['calendar'] = populated_calendar if populated_calendar is not None else calendar
     except Exception as e:
         logger.error(f"Failed to retrieve calendar: {e}")
