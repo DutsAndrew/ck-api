@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, validator, Extra
 from typing import List, Optional
 from models.bson_object_id import PyObjectId
 from bson import ObjectId
@@ -107,6 +107,9 @@ class ClientNewCalendarData(BaseModel):
      createdBy: str
      authorizedUsers: list[dict]
      viewOnlyUsers: list[dict]
+
+     class Config:
+          extra = Extra.forbid
     
 # CALENDAR TYPES CAN BE THE FOLLOWING:
     # PERSONAL - EACH USER HAS ONE
