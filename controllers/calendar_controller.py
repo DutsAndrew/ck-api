@@ -46,12 +46,12 @@ async def fetch_all_user_calendar_data(request: Request, user_email: str):
     
 
 async def post_new_calendar(request: Request):
-    new_calendar = CalendarData.create_new_calendar(request)
+    new_calendar = await CalendarData.create_new_calendar(request=request)
 
     if isinstance(new_calendar, JSONResponse):
         return new_calendar
     
-    return new_calendar
+    return jsonable_encoder(new_calendar)
 
     
 async def remove_user_from_calendar(request: Request, calendar_id: str, user_type: str, user_id: str, user_making_request_email: str):

@@ -1,6 +1,6 @@
 from fastapi import Request
 from fastapi.responses import JSONResponse
-from scripts import json_parser
+from scripts.json_parser import json_parser
 from .service_helpers.calendar_service_helpers import CalendarDataHelper
 import asyncio
 import logging
