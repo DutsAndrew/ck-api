@@ -99,6 +99,14 @@ class PendingUser(BaseModel):
             PyObjectId: str,
         },
     }
+
+# for when new calendar is created on client and sent to api
+class ClientNewCalendarData(BaseModel):
+     calendarColor: str
+     calendarName: str
+     createdBy: str
+     authorizedUsers: list[dict]
+     viewOnlyUsers: list[dict]
     
 # CALENDAR TYPES CAN BE THE FOLLOWING:
     # PERSONAL - EACH USER HAS ONE
