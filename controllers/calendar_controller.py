@@ -48,11 +48,14 @@ async def fetch_all_user_calendar_data(request: Request, user_email: str):
 async def post_new_calendar(request: Request):
     new_calendar = await CalendarData.create_new_calendar(request=request)
 
-    if isinstance(new_calendar, JSONResponse):
-        return new_calendar
+    if 'calendar' in new_calendar:
+        return JSONResponse(content={
+            'detail': new_calendar['detail'],
+            'calendar': jsonable_encoder(new_calendar['calendar']),
+        }, status_code=200)
+    else:
+        return JSONResponse(content={'detail': new_calendar['detail']}, status_code=422)
     
-    return jsonable_encoder(new_calendar)
-
     
 async def remove_user_from_calendar(request: Request, calendar_id: str, user_type: str, user_id: str, user_making_request_email: str):
     try:

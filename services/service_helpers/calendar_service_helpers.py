@@ -143,43 +143,35 @@ class CalendarDataHelper:
             updated_user_who_created_calendar = await CalendarDataHelper.update_user_calendars(request, user_id, calendar_id)
 
             if calendar_upload is None or uploaded_calendar is None or updated_user_who_created_calendar is None:
-                return JSONResponse(
-                    content={'detail': 'Failed to save, retrieve, and update calendar to user'},
-                    status_code=500
-                )
+                return {
+                    'detail': 'Failed to save, retrieve, and update calendar to user'
+                }
 
             successful_users_updated, unsuccessful_users_updated = await CalendarDataHelper.update_pending_users(request, pending_users, calendar_id)
 
             if unsuccessful_users_updated > 0:
-                return JSONResponse(
-                    content={
-                        'detail': 'Calendar created, all users were not invited successfully, please check the users and try again.',
-                        'calendar': jsonable_encoder(uploaded_calendar),
-                    },
-                    status_code=200
-                )
+                return {
+                    'calendar': uploaded_calendar,
+                    'detail': 'Calendar created, all users were not invited successfully, please check the users and try again.',
+                }
             
             if successful_users_updated == len(pending_users) or (successful_users_updated == 0 and unsuccessful_users_updated == 0):
                 populated_calendar = await CalendarDataHelper.populate_one_calendar(request, calendar_id)
                 if populated_calendar is None:
-                    return JSONResponse(content={'detail': 'Calendar was not able to be populated'}, status_code=422)
+                    return {'detail': 'Calendar was not able to be populated'}
                 
-                return JSONResponse(
-                    content={
-                        'detail': 'Calendar created and all necessary users added',
-                        'calendar': jsonable_encoder(populated_calendar),
-                    },
-                    status_code=200
-                )
+                return {
+                  'detail': 'Calendar created and all necessary users added',
+                  'calendar': populated_calendar,   
+                }
             
-            return JSONResponse(content={'detail': 'Something went wrong'})
+            return {'detail': 'Something went wrong'}
 
         except Exception as e:
             logger.error(f"Error processing request: {e}")
-            return JSONResponse(
-                content={'detail': 'There was an issue processing your request'},
-                status_code=500
-            )
+            return {
+                'detail': 'There was an issue processing your request',
+            }
 
     
     @staticmethod

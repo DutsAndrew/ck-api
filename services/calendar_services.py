@@ -57,9 +57,11 @@ class CalendarData():
 
         new_calendar, pending_users = CalendarDataHelper.create_calendar_instance(request_body)
 
-        return await CalendarDataHelper.upload_new_calendar(
+        upload_status = await CalendarDataHelper.upload_new_calendar(
             request, 
             new_calendar, 
             pending_users, 
             request_body['createdBy']
         )
+
+        return upload_status

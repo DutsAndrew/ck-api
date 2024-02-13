@@ -1,1 +1,2 @@
-# Endpoint functions that interface with MongoDB and sent the correct data to the CK-Client
+# functions called from routes are defined here
+# controllers just handle responses and call methods from services
