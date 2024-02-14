@@ -57,54 +57,14 @@ async def post_new_calendar(request: Request):
         return JSONResponse(content={'detail': new_calendar['detail']}, status_code=422)
     
     
-async def remove_user_from_calendar(request: Request, calendar_id: str, user_type: str, user_id: str, user_making_request_email: str):
-    try:
-        # query user and calendar to perform operations
-        user, calendar = await validate_user_and_calendar(request, user_making_request_email, calendar_id)
-
-        if user is None or calendar is None:
-            return JSONResponse(content={'detail': 'Invalid request'}, status_code=404)
-                
-        if user_id == calendar['created_by']:
-            return JSONResponse(content={'detail': 'The creator of the calendar can never be removed'}, status_code=422)
-        
-        # if user making request isn't authorized return immediately
-        if not has_calendar_permissions(user, calendar):
-            return JSONResponse(content={'detail': 'insufficient permissions'})
-        
-        # remove user that was requested to be removed
-        filtered_calendar = filter_out_user_from_calendar_list(user_id, calendar, user_type)
-
-        # just a validity check to ensure that an API call wasn't made with a false type, return if that's the case
-        if filtered_calendar is None:
-            return JSONResponse(content={'detail': 'Failed to update calendar'}, status_code=422)
-
-        # update calendar with new filtered calendar
-        update_calendar = await request.app.db['calendars'].replace_one({'_id': calendar_id}, filtered_calendar)
-
-        if update_calendar is None:
-            return JSONResponse(content={'detail': 'Failed to update calendar to remove user'}, status_code=422)
-        
-        # find updated calendar and populate all users on it before returning
-        updated_and_repopulated_calendar = await CalendarDataHelper.populate_one_calendar(request, calendar_id)
-
-        if updated_and_repopulated_calendar is None:
-            return JSONResponse(content={'detail': 'Failed to refetch updated calendar with removed user'}, status_code=404)
-        
-        return JSONResponse(
-            content={
-                'detail': 'User successfully removed from calendar',
-                'updated_calendar': updated_and_repopulated_calendar,
-            },
-            status_code=200
-        )
-
-    except Exception as e:
-        logger.error(f"Error processing request: {e}")
-        return JSONResponse(
-            content={'detail': 'There was an issue processing your request'},
-            status_code=500
-        )
+async def remove_user_from_calendar(request: Request, calendar_id: str, user_type: str, user_id: str, user_email: str):
+    return await CalendarData.remove_user_from_calendar_service(
+        request,
+        calendar_id,
+        user_type,
+        user_id,
+        user_email,
+    )
     
 
 async def validate_user_and_calendar(request, user_email, calendar_id):

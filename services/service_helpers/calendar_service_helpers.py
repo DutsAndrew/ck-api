@@ -275,6 +275,40 @@ class CalendarDataHelper:
         calendar['events'] = events
         
         return calendar
+    
+
+    @staticmethod
+    async def validate_user_and_calendar(
+            request: Request, 
+            user_email: str, 
+            calendar_id: str
+        ):
+        user = await request.app.db['users'].find_one({'email': user_email})
+        calendar = await request.app.db['calendars'].find_one({'_id': calendar_id})
+        return user, calendar
+    
+
+    @staticmethod
+    def has_calendar_permissions(user, calendar):
+        return user is not None and (calendar['created_by'] == user['_id'] or user['_id'] in calendar['authorized_users'])
+   
+    
+    @staticmethod
+    def filter_out_user_from_calendar_list(
+            user_id: str, 
+            calendar, 
+            user_type: str
+        ):
+        if user_type == 'authorized':
+            calendar['authorized_users'].remove(user_id)
+        elif user_type == 'pending':
+            updated_pending_users = [user for user in calendar['pending_users'] if user['_id'] != user_id] # users are nested in pending list, need to loop through to modify
+            calendar['pending_users'] = updated_pending_users
+        elif user_type == 'view_only':
+            calendar['view_only_users'].remove(user_id)
+        else:
+            return None # invalid type
+        return calendar
         
 
 class UserProjection:
