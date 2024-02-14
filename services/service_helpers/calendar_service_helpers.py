@@ -309,6 +309,20 @@ class CalendarDataHelper:
         else:
             return None # invalid type
         return calendar
+    
+
+    @staticmethod
+    async def replace_one_calendar(
+            request: Request, 
+            calendar_id: str, 
+            updated_calendar: dict
+        ):
+        replaced_calendar = await request.app.db['calendars'].replace_one(
+            {'_id': calendar_id},
+            updated_calendar
+        )
+
+        return replaced_calendar
         
 
 class UserProjection:

@@ -1,4 +1,5 @@
 from fastapi import Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from scripts.json_parser import json_parser
 from .service_helpers.calendar_service_helpers import CalendarDataHelper
@@ -95,24 +96,26 @@ class CalendarData():
             filtered_calendar = CalendarDataHelper.filter_out_user_from_calendar_list(user_id, calendar, user_type)
 
             if filtered_calendar is None:
-                return JSONResponse(content={'detail': 'Failed to update calendar'}, status_code=422)
+                return JSONResponse(content={'detail': 'Failed to remove user'}, status_code=422)
 
-            # update calendar with new filtered calendar
-            update_calendar = await request.app.db['calendars'].replace_one({'_id': calendar_id}, filtered_calendar)
+            updated_calendar = await CalendarDataHelper.replace_one_calendar(
+                request, 
+                calendar_id, 
+                filtered_calendar
+            )
 
-            if update_calendar is None:
+            if updated_calendar is None:
                 return JSONResponse(content={'detail': 'Failed to update calendar to remove user'}, status_code=422)
             
-            # find updated calendar and populate all users on it before returning
-            updated_and_repopulated_calendar = await CalendarDataHelper.populate_one_calendar(request, calendar_id)
+            populated_calendar = await CalendarDataHelper.populate_one_calendar(request, calendar_id)
 
-            if updated_and_repopulated_calendar is None:
+            if populated_calendar is None:
                 return JSONResponse(content={'detail': 'Failed to refetch updated calendar with removed user'}, status_code=404)
             
             return JSONResponse(
                 content={
                     'detail': 'User successfully removed from calendar',
-                    'updated_calendar': updated_and_repopulated_calendar,
+                    'updated_calendar': jsonable_encoder(populated_calendar),
                 },
                 status_code=200
             )
