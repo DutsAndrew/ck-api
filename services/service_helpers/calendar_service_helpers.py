@@ -280,7 +280,7 @@ class CalendarDataHelper:
     @staticmethod
     async def validate_user_and_calendar(
             request: Request, 
-            user_email: str, 
+            user_email: str,
             calendar_id: str
         ):
         user = await request.app.db['users'].find_one({'email': user_email})
