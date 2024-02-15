@@ -22,8 +22,11 @@ def test_fetch_calendar_data_user_lookup_fail(test_client_with_db, generate_test
 
 
 def test_fetch_calendar_data_user_lookup_succeeds(test_client_with_db, generate_test_token):
-    with mock.patch('controllers.calendar_controller.CalendarData.get_user_calendars', new_callable=AsyncMock) as mock_get_user_calendars:
-        mock_get_user_calendars.side_effect = HTTPException(status_code=404, detail="User not found")
+    with mock.patch('controllers.calendar_controller.CalendarData.get_user_calendars', new_callable=AsyncMock) as mock_get_user_calendars, \
+         mock.patch('controllers.calendar_controller.CalendarData.fetch_all_user_calendars', new_callable=AsyncMock) as mock_populate_user_calendars:
+        
+        mock_get_user_calendars.return_value = {'_id': '123'}
+        mock_populate_user_calendars.return_value = {'_id': '123'}
 
         response = test_client_with_db.get(
             '/calendar/getUserCalendarData',
@@ -34,8 +37,9 @@ def test_fetch_calendar_data_user_lookup_succeeds(test_client_with_db, generate_
             }
         )
 
-        assert response.status_code == 404
-        assert response.json()['detail'] == 'User not found'
+        assert response.status_code == 200
+        assert response.json()['detail'] == 'All possible calendars fetched'
+        assert 'updated_user' in response.json()
 
 
 def test_fetch_calendar_data_calendar_population_fail(test_client_with_db, generate_test_token):
