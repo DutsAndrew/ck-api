@@ -72,49 +72,15 @@ async def add_user_to_calendar(
         calendar_id: str, 
         user_id: str, 
         permission_type: str, 
-        email_of_user_making_change: str
+        user_email: str
     ):
-      try:
-          user_making_request, calendar = await CalendarDataHelper.validate_user_and_calendar(request, email_of_user_making_change, calendar_id)
-          if user_making_request is None or calendar is None:
-              return JSONResponse(content={'detail': 'There was an issue processing the user and calendar sent'}, status_code=404)
-                    
-          user_to_add = await request.app.db['users'].find_one({'_id': user_id}, projection={})
-
-          if user_to_add is None:
-              return JSONResponse(content={'detail': 'The user to add cannot be found'}, status_code=404)
-          
-          if not CalendarDataHelper.has_calendar_permissions(user_making_request, calendar):
-              return JSONResponse(content={'detail': 'The user making that request is not authorized'}, status_code=422)
-                    
-          updated_array = await append_new_user_to_calendar_user_list(
-              request,
-              user_id, 
-              calendar, 
-              permission_type, 
-          )
-
-          if updated_array is None:
-              return JSONResponse(content={'detail': 'There was an issue adding that user, either the user was already in the list, or we failed to update the list'}, status_code=422) 
-          
-          updated_calendar = await request.app.db['calendars'].find_one({'_id': calendar['_id']})
-
-          if not verify_user_was_added_to_calendar(updated_calendar, permission_type, user_id):
-              return JSONResponse(content={'detail': 'User was not added to calendar successfully'}, status_code=422)
-                    
-          populated_calendar = await CalendarDataHelper.populate_one_calendar(request, updated_calendar['_id'])
-          
-          return JSONResponse(content={
-              'detail': 'We successfully added user to your calendar',
-              'updated_calendar': populated_calendar,
-          }, status_code=200)
-      
-      except Exception as e:
-          logger.error(f"Error processing request: {e}")
-          return JSONResponse(
-              content={'detail': 'There was an issue processing your request'},
-              status_code=500
-          )
+        return await CalendarData.add_user_to_calendar_service(
+            request, 
+            calendar_id, 
+            user_id, 
+            permission_type, 
+            user_email,
+        )
 
 
 # NEED TO SETUP SO THAT ALL USERS ARE STORED AS PENDING USERS

@@ -11,6 +11,15 @@ logger = logging.getLogger(__name__)
 class CalendarDataHelper:
     
     @staticmethod
+    def handle_server_error(e: str):
+        logger.error(f"Error processing request: {e}")
+        return JSONResponse(
+            content={
+                'detail': 'There was an issue processing your request'
+            }, status_code=500
+        )
+    
+    @staticmethod
     async def get_calendars(request: Request, calendar_ids: list[str]):
         calendars = []
         async for calendar in request.app.db['calendars'].find({'_id': {'$in': calendar_ids}}):
@@ -168,10 +177,7 @@ class CalendarDataHelper:
             return {'detail': 'Something went wrong'}
 
         except Exception as e:
-            logger.error(f"Error processing request: {e}")
-            return {
-                'detail': 'There was an issue processing your request',
-            }
+            return CalendarDataHelper.handle_server_error(e)
 
     
     @staticmethod
@@ -317,12 +323,74 @@ class CalendarDataHelper:
             calendar_id: str, 
             updated_calendar: dict
         ):
-        replaced_calendar = await request.app.db['calendars'].replace_one(
+        return await request.app.db['calendars'].replace_one(
             {'_id': calendar_id},
             updated_calendar
         )
+    
 
-        return replaced_calendar
+    @staticmethod
+    async def find_one_calendar(
+        request: Request,
+        calendar_id: str,
+    ):
+        return await request.app.db['calendars'].find_one({'_id': calendar_id})
+    
+
+    @staticmethod
+    async def find_one_user(request: Request, user_id: str):
+        return await request.app.db['users'].find_one({'_id': user_id}, projection={})
+    
+
+    @staticmethod
+    async def add_one_user_to_calendar(
+            request: Request, 
+            calendar_id: str, 
+            converted_user: dict
+        ):
+         return await request.app.db['calendars'].update_one(
+            {'_id': calendar_id},
+            {'$push': {'pending_users': converted_user}}
+        )    
+
+
+    @staticmethod
+    async def add_user_to_calendar_users_list(
+        request: Request, 
+        user_id: str, 
+        calendar: Calendar, 
+        type_of_user: str, 
+    ):
+        new_pending_user = PendingUser(type_of_user, user_id)
+
+        if new_pending_user is None:
+            return None
+        
+        converted_user = jsonable_encoder(new_pending_user)
+
+        updated_calendar = await CalendarDataHelper.add_one_user_to_calendar(
+            request, 
+            calendar['_id'], 
+            converted_user
+        )
+
+        if updated_calendar is None:
+            return None
+        else:
+            return updated_calendar
+        
+
+    @staticmethod
+    def verify_user_is_in_calendar(
+            updated_calendar: Calendar,
+            permission_type,
+            user_id: str
+        ):
+            pending_users = updated_calendar.get('pending_users', [])
+            for pending_user in pending_users:
+                if pending_user['_id'] == user_id and pending_user['type'] == permission_type:
+                    return True
+            return False
         
 
 class UserProjection:
