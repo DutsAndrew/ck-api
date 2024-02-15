@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock
 from unittest import mock
 
 
+# @pytest.mark.skip(reason='Not implemented')
 def test_new_calendar_route_succeeds(test_client_with_db, generate_test_token):
     with mock.patch('controllers.calendar_controller.CalendarData.create_new_calendar', new_callable=AsyncMock) as mock_create_new_calendar:
     
@@ -43,6 +44,7 @@ def test_new_calendar_route_succeeds(test_client_with_db, generate_test_token):
         assert 'calendar' in response.json()
 
 
+# @pytest.mark.skip(reason='Not implemented')
 def test_new_calendar_route_fails_with_missing_data(test_client_with_db, generate_test_token):
     response = test_client_with_db.post(
         'calendar/uploadCalendar',
@@ -91,6 +93,7 @@ def test_new_calendar_route_fails_with_missing_data(test_client_with_db, generat
     assert response.json() == expected_response
 
 
+# @pytest.mark.skip(reason='Not implemented')
 def test_new_calendar_route_fails_with_extra_fields(test_client_with_db, generate_test_token):
     response = test_client_with_db.post(
         'calendar/uploadCalendar',

@@ -1,6 +1,8 @@
 import pytest
 from unittest.mock import AsyncMock, patch
 
+
+# @pytest.mark.skip(reason='Not implemented')
 @patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.validate_user_and_calendar', new_callable=AsyncMock)
 def test_remove_user_from_calendar_service_fails_on_no_user_or_calendar(
     mock_validate_user_and_calendar,
@@ -28,6 +30,7 @@ def test_remove_user_from_calendar_service_fails_on_no_user_or_calendar(
     assert json_response['detail'] == "This request cannot be processed"
 
 
+# @pytest.mark.skip(reason='Not implemented')
 @patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.validate_user_and_calendar', new_callable=AsyncMock)
 def test_remove_user_from_calendar_service_fails_on_no_user_or_calendar(
     mock_validate_user_and_calendar,
@@ -59,6 +62,7 @@ def test_remove_user_from_calendar_service_fails_on_no_user_or_calendar(
     assert json_response['detail'] == "This request cannot be processed"
 
 
+# @pytest.mark.skip(reason='Not implemented')
 @patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.validate_user_and_calendar', new_callable=AsyncMock)
 @patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.has_calendar_permissions')
 def test_remove_user_from_calendar_service_fails_on_no_user_has_no_permissions(
@@ -92,6 +96,7 @@ def test_remove_user_from_calendar_service_fails_on_no_user_has_no_permissions(
     assert json_response['detail'] == "This request cannot be processed"
 
 
+# @pytest.mark.skip(reason='Not implemented')
 @patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.validate_user_and_calendar', new_callable=AsyncMock)
 @patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.filter_out_user_from_calendar_list')
 @patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.has_calendar_permissions')
@@ -125,6 +130,7 @@ def test_remove_user_from_calendar_service_failed_to_filter_user(
     assert json_response['detail'] == "Failed to remove user"
 
 
+# @pytest.mark.skip(reason='Not implemented')
 @patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.validate_user_and_calendar', new_callable=AsyncMock)
 @patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.filter_out_user_from_calendar_list')
 @patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.has_calendar_permissions')
@@ -161,6 +167,7 @@ def test_remove_user_from_calendar_service_failed_to_filter_user(
     assert json_response['detail'] == "Failed to remove user"
 
 
+# @pytest.mark.skip(reason='Not implemented')
 @patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.validate_user_and_calendar', new_callable=AsyncMock)
 @patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.has_calendar_permissions')
 @patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.filter_out_user_from_calendar_list')
@@ -203,6 +210,7 @@ def test_remove_user_from_calendar_fails_on_failure_to_repopulate_calendar(
     assert json_response['detail'] == "Failed to refetch updated calendar with removed user"
 
 
+# @pytest.mark.skip(reason='Not implemented')
 @patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.validate_user_and_calendar', new_callable=AsyncMock)
 @patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.has_calendar_permissions')
 @patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.filter_out_user_from_calendar_list')

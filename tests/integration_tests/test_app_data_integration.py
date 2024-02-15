@@ -1,5 +1,6 @@
 import pytest
 
+# @pytest.mark.skip(reason='Not implemented')
 def test_fetch_calendar_app_data(test_client_with_db, generate_test_token):
     response = test_client_with_db.get(
     '/calendar',

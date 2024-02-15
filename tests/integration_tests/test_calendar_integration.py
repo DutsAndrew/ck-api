@@ -1,6 +1,6 @@
 import pytest
 
-
+# @pytest.mark.skip(reason='Not implemented')
 def test_fetch_calendar_app_data(test_client_with_db, generate_test_token):
     response = test_client_with_db.get(
         '/calendar',
@@ -20,6 +20,7 @@ def test_fetch_calendar_app_data(test_client_with_db, generate_test_token):
     assert 'calendar_dates' in json_response['data']
 
 
+# @pytest.mark.skip(reason='Not implemented')
 def test_fetch_all_user_calendar_data(test_client_with_db, generate_test_token):
     response = test_client_with_db.get(
     '/calendar/getUserCalendarData',
@@ -42,6 +43,7 @@ def test_fetch_all_user_calendar_data(test_client_with_db, generate_test_token):
     assert 'pending_calendars' in user
 
 
+# @pytest.mark.skip(reason='Not implemented')
 def test_create_new_calendar_adds_calendar_to_db(test_client_with_db, generate_test_token):
     response = test_client_with_db.post(
         '/calendar/uploadCalendar',

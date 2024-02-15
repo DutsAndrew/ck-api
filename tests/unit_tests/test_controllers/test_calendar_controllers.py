@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock
 from unittest import mock
 from fastapi import HTTPException
 
-
+# @pytest.mark.skip(reason='Not implemented')
 def test_fetch_calendar_data_user_lookup_fail(test_client_with_db, generate_test_token):
     with mock.patch('controllers.calendar_controller.CalendarData.get_user_calendars', new_callable=AsyncMock) as mock_get_user_calendars:
         mock_get_user_calendars.side_effect = HTTPException(status_code=404, detail="User not found")
@@ -21,6 +21,7 @@ def test_fetch_calendar_data_user_lookup_fail(test_client_with_db, generate_test
         assert response.json()['detail'] == 'User not found'
 
 
+# @pytest.mark.skip(reason='Not implemented')
 def test_fetch_calendar_data_user_lookup_succeeds(test_client_with_db, generate_test_token):
     with mock.patch('controllers.calendar_controller.CalendarData.get_user_calendars', new_callable=AsyncMock) as mock_get_user_calendars, \
          mock.patch('controllers.calendar_controller.CalendarData.fetch_all_user_calendars', new_callable=AsyncMock) as mock_populate_user_calendars:
@@ -42,6 +43,7 @@ def test_fetch_calendar_data_user_lookup_succeeds(test_client_with_db, generate_
         assert 'updated_user' in response.json()
 
 
+# @pytest.mark.skip(reason='Not implemented')
 def test_fetch_calendar_data_calendar_population_fail(test_client_with_db, generate_test_token):
     with mock.patch('controllers.calendar_controller.CalendarData.fetch_all_user_calendars', new_callable=AsyncMock) as mock_populate_user_calendars:
         mock_populate_user_calendars.side_effect = HTTPException(status_code=422, detail="Failed to fetch all user calendars")
@@ -59,6 +61,7 @@ def test_fetch_calendar_data_calendar_population_fail(test_client_with_db, gener
         assert response.json()['detail'] == 'Failed to fetch all user calendars'
 
 
+# @pytest.mark.skip(reason='Not implemented')
 def test_create_new_calendar_throws_server_error(test_client_with_db, generate_test_token):
     with mock.patch('controllers.calendar_controller.CalendarData.create_new_calendar', new_callable=AsyncMock) as mock_create_new_calendar:
         mock_create_new_calendar.side_effect = HTTPException(status_code=500, detail="Server error")
@@ -93,6 +96,7 @@ def test_create_new_calendar_throws_server_error(test_client_with_db, generate_t
         assert response.json()['detail'] == 'Server error'
 
 
+# @pytest.mark.skip(reason='Not implemented')
 def test_create_new_calendar_throws_server_error(test_client_with_db, generate_test_token):
     with mock.patch('controllers.calendar_controller.CalendarData.create_new_calendar', new_callable=AsyncMock) as mock_create_new_calendar:
         mock_create_new_calendar.side_effect = HTTPException(status_code=422, detail="unprocessable entity")
@@ -127,6 +131,7 @@ def test_create_new_calendar_throws_server_error(test_client_with_db, generate_t
         assert response.json()['detail'] == 'unprocessable entity'
 
 
+# @pytest.mark.skip(reason='Not implemented')
 def test_create_new_calendar_throws_server_error(test_client_with_db, generate_test_token):
     with mock.patch('controllers.calendar_controller.CalendarData.create_new_calendar', new_callable=AsyncMock) as mock_create_new_calendar:
         mock_create_new_calendar.side_effect = HTTPException(status_code=404, detail="Failed to find db item")

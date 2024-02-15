@@ -38,11 +38,3 @@ def generate_test_token():
     bearer_token = encode_bearer_token(user_login=user_login)
 
     return bearer_token
-
-
-# if async operations are needed use:
-  # import asyncio
-
-  # pytest_plugins = ('pytest_asyncio',)
-
-  # @pytest.mark.asyncio
