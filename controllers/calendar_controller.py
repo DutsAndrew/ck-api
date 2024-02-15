@@ -65,29 +65,6 @@ async def remove_user_from_calendar(request: Request, calendar_id: str, user_typ
         user_id,
         user_email,
     )
-    
-
-async def validate_user_and_calendar(request, user_email, calendar_id):
-    user = await request.app.db['users'].find_one({'email': user_email})
-    calendar = await request.app.db['calendars'].find_one({'_id': calendar_id})
-    return user, calendar
-
-
-def has_calendar_permissions(user, calendar):
-    return user is not None and (calendar['created_by'] == user['_id'] or user['_id'] in calendar['authorized_users'])
-    
-
-def filter_out_user_from_calendar_list(user_id, calendar, user_type):
-    if user_type == 'authorized':
-        calendar['authorized_users'].remove(user_id)
-    elif user_type == 'pending':
-        updated_pending_users = [user for user in calendar['pending_users'] if user['_id'] != user_id] # users are nested in pending list, need to loop through to modify
-        calendar['pending_users'] = updated_pending_users
-    elif user_type == 'view_only':
-        calendar['view_only_users'].remove(user_id)
-    else:
-        return None # invalid type
-    return calendar
 
 
 async def add_user_to_calendar(
@@ -98,7 +75,7 @@ async def add_user_to_calendar(
         email_of_user_making_change: str
     ):
       try:
-          user_making_request, calendar = await validate_user_and_calendar(request, email_of_user_making_change, calendar_id)
+          user_making_request, calendar = await CalendarDataHelper.validate_user_and_calendar(request, email_of_user_making_change, calendar_id)
           if user_making_request is None or calendar is None:
               return JSONResponse(content={'detail': 'There was an issue processing the user and calendar sent'}, status_code=404)
                     
@@ -107,7 +84,7 @@ async def add_user_to_calendar(
           if user_to_add is None:
               return JSONResponse(content={'detail': 'The user to add cannot be found'}, status_code=404)
           
-          if not has_calendar_permissions(user_making_request, calendar):
+          if not CalendarDataHelper.has_calendar_permissions(user_making_request, calendar):
               return JSONResponse(content={'detail': 'The user making that request is not authorized'}, status_code=422)
                     
           updated_array = await append_new_user_to_calendar_user_list(
