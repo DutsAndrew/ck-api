@@ -97,7 +97,7 @@ def test_create_new_calendar_throws_server_error(test_client_with_db, generate_t
 
 
 # @pytest.mark.skip(reason='Not implemented')
-def test_create_new_calendar_throws_server_error(test_client_with_db, generate_test_token):
+def test_create_new_calendar_throws_unprocessable_entity_error(test_client_with_db, generate_test_token):
     with mock.patch('controllers.calendar_controller.CalendarData.create_new_calendar', new_callable=AsyncMock) as mock_create_new_calendar:
         mock_create_new_calendar.side_effect = HTTPException(status_code=422, detail="unprocessable entity")
 
@@ -132,7 +132,7 @@ def test_create_new_calendar_throws_server_error(test_client_with_db, generate_t
 
 
 # @pytest.mark.skip(reason='Not implemented')
-def test_create_new_calendar_throws_server_error(test_client_with_db, generate_test_token):
+def test_create_new_calendar_throws_could_not_find_error(test_client_with_db, generate_test_token):
     with mock.patch('controllers.calendar_controller.CalendarData.create_new_calendar', new_callable=AsyncMock) as mock_create_new_calendar:
         mock_create_new_calendar.side_effect = HTTPException(status_code=404, detail="Failed to find db item")
 

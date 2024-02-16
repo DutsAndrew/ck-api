@@ -54,7 +54,7 @@ def test_create_new_calendar_adds_calendar_to_db(test_client_with_db, generate_t
         },
         json={
             'calendarColor': 'test',
-            'calendarName': 'test',
+            'calendarName': 'test_for_developers_only_ck_api',
             'createdBy': 'test test',
             'authorizedUsers': [
                 {
@@ -102,3 +102,33 @@ def test_add_user_to_calendar_adds_user(test_client_with_db, generate_test_token
 
     assert 'detail' in json_response and json_response['detail'] == 'We successfully added user to your calendar'
     assert 'updated_calendar' in json_response
+
+
+# @pytest.mark.skip(reason='Not implemented')
+@pytest.mark.order(after='test_create_new_calendar_adds_calendar_to_db')
+async def test_delete_calendar_succeeds(test_client_with_db, generate_test_token):
+    calendar = await test_client_with_db.db['calendars'].find_one(
+        {'name': 'test_for_developers_only_ck_api'}
+    )
+
+    if calendar is None:
+        return None
+
+    calendar_id = calendar['_id']
+    user_id = '65c637416c0f0cc3d35698c2'
+
+    response = test_client_with_db.delete(
+        f'/calendar/{calendar_id}/deleteCalendar/{user_id}',
+        headers={
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {generate_test_token}',
+            'Content-type': 'application/json',
+        },
+    )
+
+    assert response.status_code == 200
+
+    json_response = response.json()
+
+    assert 'detail' in json_response and json_response['detail'] == 'Calendar successfully deleted'
+    assert 'calendar_id' in json_response

@@ -71,6 +71,7 @@ fastapi-cache = {version = "*", extras = ["mongodb"]}
 pytest-mock = "*"
 asyncmock = "*"
 asynctest = "*"
+pytest-ordering = "*"
 
 [dev-packages]
 jinja2 = ">=3.1.3"

@@ -232,12 +232,11 @@ class CalendarData():
 
             users_remove_status = await CalendarDataHelper.remove_calendar_from_users(
                 request, 
-                all_user_ids, 
+                all_user_ids,
                 calendar_id
             )
 
-            if users_remove_status > 0:
-                logger.warning(f'When attempting to remove calendar from user instances, {users_remove_status}\'s were not removed')
+            CalendarDataHelper.log_user_removal_status(users_remove_status)
 
             delete_calendar = await CalendarDataHelper.delete_one_calendar(
                 request,

@@ -443,8 +443,14 @@ class CalendarDataHelper:
     @staticmethod
     async def delete_one_calendar(request: Request, calendar_id: str):
         return await request.app.db['calendars'].delete_one({'_id': calendar_id})
-        
+    
 
+    @staticmethod
+    def log_user_removal_status(users_remove_status: int):
+        if users_remove_status > 0:
+            return logger.warning(f'When attempting to remove calendar from user instances, {users_remove_status}\'s were not removed')
+        
+        
 class UserProjection:
     user_projection = {
         'first_name': 1,
