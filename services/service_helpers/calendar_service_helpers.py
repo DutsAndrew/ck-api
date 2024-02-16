@@ -391,6 +391,58 @@ class CalendarDataHelper:
                 if pending_user['_id'] == user_id and pending_user['type'] == permission_type:
                     return True
             return False
+    
+
+    @staticmethod
+    def group_all_user_ids_in_calendar(calendar, user_id):
+        all_user_ids = [user_id]
+
+        all_user_ids.extend(calendar['authorized_users'])
+        all_user_ids.extend(calendar['view_only_users'])
+
+        for pending_user in calendar['pending_users']:
+            all_user_ids.append(pending_user['_id'])
+
+        return all_user_ids
+
+
+    @staticmethod
+    async def remove_calendar_from_users(
+            request: Request, 
+            all_user_ids: list[str], 
+            calendar_id: str
+        ):
+        errors = 0
+
+        async for user in request.app.db['users'].find({'_id': {'$in': all_user_ids}}):
+            try:
+                if calendar_id in user['calendars']:
+                    await request.app.db['users'].update_one(
+                        {'_id': user['_id']}, 
+                        {'$pull': {'calendars': calendar_id}}
+                    )
+            except Exception as e:
+                logging.error(f"Error updating calendars for user {user['_id']}: {e}")
+                errors += 1
+                continue
+
+            try:
+                if calendar_id in user['pending_calendars']:
+                    await request.app.db['users'].update_one(
+                        {'_id': user['_id']}, 
+                        {'$pull': {'pending_calendars': calendar_id}}
+                    )
+            except Exception as e:
+                logging.error(f"Error updating pending_calendars for user {user['_id']}: {e}")
+                errors += 1
+                continue
+            
+        return errors
+    
+
+    @staticmethod
+    async def delete_one_calendar(request: Request, calendar_id: str):
+        return await request.app.db['calendars'].delete_one({'_id': calendar_id})
         
 
 class UserProjection:

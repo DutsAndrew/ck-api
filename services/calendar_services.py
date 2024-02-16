@@ -205,3 +205,54 @@ class CalendarData():
             
         except Exception as e:
             return CalendarDataHelper.handle_server_error(e)
+        
+
+    @staticmethod
+    async def delete_calendar_service(
+            request: Request,
+            calendar_id: str,
+            user_id: str,
+        ):
+        try:
+            user = await CalendarDataHelper.find_one_user(request, user_id)
+            calendar = await CalendarDataHelper.find_one_calendar(request, calendar_id)
+
+            if user is None or calendar is None:
+                  return JSONResponse(content={
+                      'detail': 'Invalid data requested'}, status_code=404
+                  ) 
+            
+            if calendar['created_by'] != user_id:
+                return JSONResponse(content={
+                    'detail': 'You cannot delete this calendar as you are not it\'s creator'}, 
+                    status_code=422
+                )
+            
+            all_user_ids = CalendarDataHelper.group_all_user_ids_in_calendar(calendar, user['_id'])
+
+            users_remove_status = await CalendarDataHelper.remove_calendar_from_users(
+                request, 
+                all_user_ids, 
+                calendar_id
+            )
+
+            if users_remove_status > 0:
+                logger.warning(f'When attempting to remove calendar from user instances, {users_remove_status}\'s were not removed')
+
+            delete_calendar = await CalendarDataHelper.delete_one_calendar(
+                request,
+                calendar_id,
+            )
+
+            if delete_calendar is None:
+                return JSONResponse(content={
+                    'detail': 'Failed to delete calendar'}, status_code=422
+                )
+            
+            return JSONResponse(content={
+                'detail': 'Calendar successfully deleted',
+                'calendar_id': calendar_id,
+            }, status_code=200)
+
+        except Exception as e:
+            return CalendarDataHelper.handle_server_error(e)
