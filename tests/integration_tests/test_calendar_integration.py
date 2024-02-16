@@ -78,6 +78,27 @@ def test_create_new_calendar_adds_calendar_to_db(test_client_with_db, generate_t
     assert response.status_code == 200
 
     json_response = response.json()
-    print(json_response)
 
     assert 'detail' in json_response and json_response['detail'] == 'Calendar created and all necessary users added'
+
+
+# @pytest.mark.skip(reason='Not implemented')
+def test_add_user_to_calendar_adds_user(test_client_with_db, generate_test_token):
+    calendar_id = '65c637426c0f0cc3d35698c4'
+    user_id = '656a49c2ecbf3c97e58a1d37'
+
+    response = test_client_with_db.post(
+        f'/calendar/{calendar_id}/addUser/{user_id}/authorized',
+        headers={
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {generate_test_token}',
+            'Content-type': 'application/json',
+        },
+    )
+
+    assert response.status_code == 200
+
+    json_response = response.json()
+
+    assert 'detail' in json_response and json_response['detail'] == 'We successfully added user to your calendar'
+    assert 'updated_calendar' in json_response

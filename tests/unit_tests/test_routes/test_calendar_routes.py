@@ -145,3 +145,26 @@ def test_new_calendar_route_fails_with_extra_fields(test_client_with_db, generat
     }
 
     assert response.json() == expected_response
+
+
+# @pytest.mark.skip(reason='Not implemented')
+def test_add_user_to_calendar_route_succeeds(test_client_with_db, generate_test_token):
+    with mock.patch('controllers.calendar_controller.CalendarData.add_user_to_calendar_service', new_callable=AsyncMock) as mock_add_user_to_calendar_service:
+    
+        mock_add_user_to_calendar_service.return_value = {
+            'detail': 'We successfully added user to your calendar',
+            'updated_calendar': {'_id': '123'},
+        }
+
+        response = test_client_with_db.post(
+            'calendar/123/addUser/456/authorized',
+            headers={
+                'Accept': 'application/json',
+                'Authorization': f'Bearer {generate_test_token}',
+                'Content-type': 'application/json',
+            },
+        )
+
+        assert response.status_code == 200
+        assert response.json()['detail'] == 'We successfully added user to your calendar'
+        assert 'updated_calendar' in response.json()

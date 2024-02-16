@@ -145,29 +145,26 @@ class CalendarData():
         try:
             user, calendar = await CalendarDataHelper.validate_user_and_calendar(
                 request, 
-                user_email, calendar_id
+                user_email, 
+                calendar_id
             )
 
-            if user is None or calendar is None:
-              return JSONResponse(content={
-                  'detail': 'There was an issue processing the user and calendar sent'}, status_code=404
-            )
+            if (user is None or 
+                calendar is None or 
+                user_id == calendar['created_by'] or 
+                not CalendarDataHelper.has_calendar_permissions(user, calendar)
+                ):
+                return JSONResponse(content={
+                    'detail': 'This request cannot be processed'
+                }, status_code=422)
 
-            user_to_add = CalendarDataHelper.find_one_user(
+            user_to_add = await CalendarDataHelper.find_one_user(
                 request, 
                 user_id
             )
 
             if user_to_add is None:
                 return JSONResponse(content={'detail': 'The user to add cannot be found'}, status_code=404)
-            
-            if not CalendarDataHelper.has_calendar_permissions(
-                user_email, 
-                calendar
-            ):
-                return JSONResponse(content={
-                    'detail': 'The user making that request is not authorized'}, status_code=422
-                )
             
             updated_list = await CalendarDataHelper.add_user_to_calendar_users_list(
                 request,
@@ -181,6 +178,11 @@ class CalendarData():
             
             updated_calendar = await CalendarDataHelper.find_one_calendar(request, calendar_id)
 
+            if updated_calendar is None:
+                return JSONResponse(content={
+                    'detail': 'Failed to refetch updated calendar with added user'}, status_code=404
+                )
+            
             if not CalendarDataHelper.verify_user_is_in_calendar(
                 updated_calendar, 
                 permission_type, user_id
@@ -188,17 +190,17 @@ class CalendarData():
                 return JSONResponse(content={
                     'detail': 'User was not added to calendar successfully'}, status_code=422
                 )
-                        
+                                    
             populated_calendar = await CalendarDataHelper.populate_one_calendar(request, calendar_id)
 
             if populated_calendar is None:
                 return JSONResponse(content={
                     'detail': 'Failed to refetch updated calendar with added user'}, status_code=404
                 )
-            
+                        
             return JSONResponse(content={
                 'detail': 'We successfully added user to your calendar',
-                'updated_calendar': populated_calendar,
+                'updated_calendar': jsonable_encoder(populated_calendar),
             }, status_code=200)
             
         except Exception as e:

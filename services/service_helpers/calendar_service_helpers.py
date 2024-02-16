@@ -383,7 +383,7 @@ class CalendarDataHelper:
     @staticmethod
     def verify_user_is_in_calendar(
             updated_calendar: Calendar,
-            permission_type,
+            permission_type: str,
             user_id: str
         ):
             pending_users = updated_calendar.get('pending_users', [])

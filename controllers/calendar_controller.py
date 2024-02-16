@@ -81,40 +81,6 @@ async def add_user_to_calendar(
             permission_type, 
             user_email,
         )
-
-
-# NEED TO SETUP SO THAT ALL USERS ARE STORED AS PENDING USERS
-async def append_new_user_to_calendar_user_list(
-        request: Request, 
-        user_id: str, 
-        calendar: Calendar, 
-        type_of_user: str, 
-    ):
-        new_pending_user = PendingUser(type_of_user, user_id)
-        if new_pending_user is None:
-            return None
-        converted_user = jsonable_encoder(new_pending_user)
-        updated_calendar = await request.app.db['calendars'].update_one(
-            {'_id': calendar['_id']},
-            {'$push': {'pending_users': converted_user}}
-        )
-
-        if updated_calendar is None:
-            return None
-        else:
-            return updated_calendar
-        
-
-def verify_user_was_added_to_calendar(
-        updated_calendar: Calendar,
-        permission_type,
-        user_id: str
-    ):
-        pending_users = updated_calendar.get('pending_users', [])
-        for pending_user in pending_users:
-            if pending_user['_id'] == user_id and pending_user['type'] == permission_type:
-                return True
-        return False
         
 
 async def delete_calendar(request: Request, calendar_id: str, user_id: str):

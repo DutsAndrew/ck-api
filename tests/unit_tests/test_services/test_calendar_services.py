@@ -252,3 +252,330 @@ def test_remove_user_from_calendar_succeeds(
     assert response.status_code == 200
     assert json_response['detail'] == "User successfully removed from calendar"
     assert json_response['updated_calendar']['_id'] == '123'
+
+
+# @pytest.mark.skip(reason='Not implemented')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.validate_user_and_calendar', new_callable=AsyncMock)
+def test_add_user_to_calendar_fails_on_no_user_to_add_found(
+        mock_validate_user_and_calendar,
+        test_client_with_db,
+        generate_test_token,
+    ):
+    calendar_id = 'test_calendar_id'
+    user_type = 'test_user_type'
+    user_id = 'authorized'
+
+    mock_validate_user_and_calendar.return_value = None
+
+    response = test_client_with_db.post(
+        f'calendar/{calendar_id}/addUser/{user_id}/{user_type}',
+        headers={
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {generate_test_token}',
+            'Content-type': 'application/json',
+        }
+    )
+
+    json_response = response.json()
+
+    assert response.status_code == 404
+    assert json_response['detail'] == "There was an issue processing the user and calendar sent"
+
+
+# @pytest.mark.skip(reason='Not implemented')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.validate_user_and_calendar', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_user', new_callable=AsyncMock)
+def test_add_user_to_calendar_fails_on_no_user_to_add_found(
+        mock_find_one_user,
+        mock_validate_user_and_calendar,
+        test_client_with_db,
+        generate_test_token,
+    ):
+    calendar_id = 'test_calendar_id'
+    user_type = 'test_user_type'
+    user_id = 'authorized'
+
+    mock_validate_user_and_calendar.return_value = (
+        {'_id': '123'}, 
+        {'_id': '123', 'created_by': '456'}
+    )
+    mock_find_one_user.return_value = None
+
+    response = test_client_with_db.post(
+        f'calendar/{calendar_id}/addUser/{user_id}/{user_type}',
+        headers={
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {generate_test_token}',
+            'Content-type': 'application/json',
+        }
+    )
+
+    json_response = response.json()
+
+    assert response.status_code == 404
+    assert json_response['detail'] == "The user to add cannot be found"
+
+
+# @pytest.mark.skip(reason='Not implemented')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.validate_user_and_calendar', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_user', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.has_calendar_permissions')
+def test_add_user_to_calendar_fails_on_no_calendar_permissions(
+        mock_has_calendar_permissions,
+        mock_find_one_user,
+        mock_validate_user_and_calendar,
+        test_client_with_db,
+        generate_test_token,
+    ):
+    calendar_id = 'test_calendar_id'
+    user_type = 'test_user_type'
+    user_id = 'authorized'
+
+    mock_validate_user_and_calendar.return_value = (
+        {'_id': '123'}, 
+        {'_id': '123', 'created_by': '456'}
+    )
+    mock_find_one_user.return_value = {'_id': '123'}
+    mock_has_calendar_permissions.return_value = False
+
+    response = test_client_with_db.post(
+        f'calendar/{calendar_id}/addUser/{user_id}/{user_type}',
+        headers={
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {generate_test_token}',
+            'Content-type': 'application/json',
+        }
+    )
+
+    json_response = response.json()
+
+    assert response.status_code == 422
+    assert json_response['detail'] == "The user making that request is not authorized"
+
+
+# @pytest.mark.skip(reason='Not implemented')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.validate_user_and_calendar', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_user', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.has_calendar_permissions')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.add_user_to_calendar_users_list', new_callable=AsyncMock)
+def test_add_user_to_calendar_fails_on_user_not_added_to_calendar_list(
+        mock_add_user_to_calendar_users_list,
+        mock_has_calendar_permissions,
+        mock_find_one_user,
+        mock_validate_user_and_calendar,
+        test_client_with_db,
+        generate_test_token,
+    ):
+    calendar_id = 'test_calendar_id'
+    user_type = 'test_user_type'
+    user_id = 'authorized'
+
+    mock_validate_user_and_calendar.return_value = (
+        {'_id': '123'}, 
+        {'_id': '123', 'created_by': '456'}
+    )
+    mock_find_one_user.return_value = {'_id': '123'}
+    mock_has_calendar_permissions.return_value = True
+    mock_add_user_to_calendar_users_list.return_value = None
+
+    response = test_client_with_db.post(
+        f'calendar/{calendar_id}/addUser/{user_id}/{user_type}',
+        headers={
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {generate_test_token}',
+            'Content-type': 'application/json',
+        }
+    )
+
+    json_response = response.json()
+
+    assert response.status_code == 422
+    assert json_response['detail'] == "There was an issue adding that user, either the user was already in the list, or we failed to update the list"
+
+
+# @pytest.mark.skip(reason='Not implemented')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.validate_user_and_calendar', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_user', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.has_calendar_permissions')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.add_user_to_calendar_users_list', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_calendar', new_callable=AsyncMock)
+def test_add_user_to_calendar_fails_on_no_calendar_return_on_update_find(
+        mock_find_one_calendar,
+        mock_add_user_to_calendar_users_list,
+        mock_has_calendar_permissions,
+        mock_find_one_user,
+        mock_validate_user_and_calendar,
+        test_client_with_db,
+        generate_test_token,
+    ):
+    calendar_id = 'test_calendar_id'
+    user_type = 'test_user_type'
+    user_id = 'authorized'
+
+    mock_validate_user_and_calendar.return_value = (
+        {'_id': '123'}, 
+        {'_id': '123', 'created_by': '456'}
+    )
+    mock_find_one_user.return_value = {'_id': '123'}
+    mock_has_calendar_permissions.return_value = True
+    mock_add_user_to_calendar_users_list.return_value = {'_id': '123'}
+    mock_find_one_calendar.return_value = None
+
+    response = test_client_with_db.post(
+        f'calendar/{calendar_id}/addUser/{user_id}/{user_type}',
+        headers={
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {generate_test_token}',
+            'Content-type': 'application/json',
+        }
+    )
+
+    json_response = response.json()
+
+    assert response.status_code == 404
+    assert json_response['detail'] == "Failed to refetch updated calendar with added user"
+
+
+# @pytest.mark.skip(reason='Not implemented')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.validate_user_and_calendar', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_user', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.has_calendar_permissions')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.add_user_to_calendar_users_list', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_calendar', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.verify_user_is_in_calendar')
+def test_add_user_to_calendar_fails_on_user_in_calendar_check_fail(
+        mock_verify_user_is_in_calendar,
+        mock_find_one_calendar,
+        mock_add_user_to_calendar_users_list,
+        mock_has_calendar_permissions,
+        mock_find_one_user,
+        mock_validate_user_and_calendar,
+        test_client_with_db,
+        generate_test_token,
+    ):
+    calendar_id = 'test_calendar_id'
+    user_type = 'test_user_type'
+    user_id = 'authorized'
+
+    mock_validate_user_and_calendar.return_value = (
+        {'_id': '123'}, 
+        {'_id': '123', 'created_by': '456'}
+    )
+    mock_find_one_user.return_value = {'_id': '123'}
+    mock_has_calendar_permissions.return_value = True
+    mock_add_user_to_calendar_users_list.return_value = {'_id': '123'}
+    mock_find_one_calendar.return_value = {'_id': '123'}
+    mock_verify_user_is_in_calendar.return_value = False
+
+    response = test_client_with_db.post(
+        f'calendar/{calendar_id}/addUser/{user_id}/{user_type}',
+        headers={
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {generate_test_token}',
+            'Content-type': 'application/json',
+        }
+    )
+
+    json_response = response.json()
+
+    assert response.status_code == 422
+    assert json_response['detail'] == "User was not added to calendar successfully"
+
+
+# @pytest.mark.skip(reason='Not implemented')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.validate_user_and_calendar', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_user', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.has_calendar_permissions')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.add_user_to_calendar_users_list', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_calendar', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.verify_user_is_in_calendar')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.populate_one_calendar', new_callable=AsyncMock)
+def test_add_user_to_calendar_fails_on_unpopulated_calendar_return(
+        mock_populate_one_calendar,
+        mock_verify_user_is_in_calendar,
+        mock_find_one_calendar,
+        mock_add_user_to_calendar_users_list,
+        mock_has_calendar_permissions,
+        mock_find_one_user,
+        mock_validate_user_and_calendar,
+        test_client_with_db,
+        generate_test_token,
+    ):
+    calendar_id = 'test_calendar_id'
+    user_type = 'test_user_type'
+    user_id = 'authorized'
+
+    mock_validate_user_and_calendar.return_value = (
+        {'_id': '123'}, 
+        {'_id': '123', 'created_by': '456'}
+    )
+    mock_find_one_user.return_value = {'_id': '123'}
+    mock_has_calendar_permissions.return_value = True
+    mock_add_user_to_calendar_users_list.return_value = {'_id': '123'}
+    mock_find_one_calendar.return_value = {'_id': '123'}
+    mock_verify_user_is_in_calendar.return_value = True
+    mock_populate_one_calendar.return_value = None
+
+    response = test_client_with_db.post(
+        f'calendar/{calendar_id}/addUser/{user_id}/{user_type}',
+        headers={
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {generate_test_token}',
+            'Content-type': 'application/json',
+        }
+    )
+
+    json_response = response.json()
+
+    assert response.status_code == 404
+    assert json_response['detail'] == "Failed to refetch updated calendar with added user"
+
+
+# @pytest.mark.skip(reason='Not implemented')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.validate_user_and_calendar', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_user', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.has_calendar_permissions')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.add_user_to_calendar_users_list', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_calendar', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.verify_user_is_in_calendar')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.populate_one_calendar', new_callable=AsyncMock)
+def test_add_user_to_calendar_succeeds(
+        mock_populate_one_calendar,
+        mock_verify_user_is_in_calendar,
+        mock_find_one_calendar,
+        mock_add_user_to_calendar_users_list,
+        mock_has_calendar_permissions,
+        mock_find_one_user,
+        mock_validate_user_and_calendar,
+        test_client_with_db,
+        generate_test_token,
+    ):
+    calendar_id = 'test_calendar_id'
+    user_type = 'test_user_type'
+    user_id = 'authorized'
+
+    mock_validate_user_and_calendar.return_value = (
+        {'_id': '123'}, 
+        {'_id': '123', 'created_by': '456'}
+    )
+    mock_find_one_user.return_value = {'_id': '123'}
+    mock_has_calendar_permissions.return_value = True
+    mock_add_user_to_calendar_users_list.return_value = {'_id': '123'}
+    mock_find_one_calendar.return_value = {'_id': '123'}
+    mock_verify_user_is_in_calendar.return_value = True
+    mock_populate_one_calendar.return_value = {'_id': '123'}
+
+    response = test_client_with_db.post(
+        f'calendar/{calendar_id}/addUser/{user_id}/{user_type}',
+        headers={
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {generate_test_token}',
+            'Content-type': 'application/json',
+        }
+    )
+
+    json_response = response.json()
+
+    assert response.status_code == 200
+    assert json_response['detail'] == "We successfully added user to your calendar"
+    assert 'updated_calendar' in json_response

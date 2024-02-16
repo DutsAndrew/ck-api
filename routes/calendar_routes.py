@@ -64,7 +64,7 @@ async def post_new_user(
           calendar_id, 
           user_id, 
           permission_type, 
-          token['email']
+          token['email'],
     )
 
 
