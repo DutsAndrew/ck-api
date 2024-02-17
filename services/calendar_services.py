@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class CalendarData():
 
     @staticmethod
-    async def get_user_calendars(request: Request, user_email: str):
+    async def get_user_calendars_service(request: Request, user_email: str):
         try:
             user = await request.app.db['users'].find_one(
                 {"email": user_email},
@@ -35,7 +35,7 @@ class CalendarData():
         
 
     @staticmethod
-    async def fetch_all_user_calendars(request: Request, user):
+    async def fetch_all_user_calendars_service(request: Request, user):
         try:
             calendars, pending_calendars, personal_calendar = await asyncio.gather(
                 CalendarDataHelper.populate_individual_calendars(request=request, calendar_ids=user.get('calendars', [])),
@@ -57,7 +57,7 @@ class CalendarData():
     
     
     @staticmethod
-    async def create_new_calendar(request: Request):
+    async def create_new_calendar_service(request: Request):
         try:
             request_body = await json_parser(request=request)
 
@@ -81,12 +81,12 @@ class CalendarData():
 
     @staticmethod
     async def remove_user_from_calendar_service(
-            request: Request, 
-            calendar_id: str, 
-            user_type: str,
-            user_id: str, 
-            user_email: str
-        ):
+        request: Request, 
+        calendar_id: str, 
+        user_type: str,
+        user_id: str, 
+        user_email: str
+    ):
         try:
             user, calendar = await CalendarDataHelper.validate_user_and_calendar(
                 request, 
@@ -209,10 +209,10 @@ class CalendarData():
 
     @staticmethod
     async def delete_calendar_service(
-            request: Request,
-            calendar_id: str,
-            user_id: str,
-        ):
+        request: Request,
+        calendar_id: str,
+        user_id: str,
+    ):
         try:
             user = await CalendarDataHelper.find_one_user(request, user_id)
             calendar = await CalendarDataHelper.find_one_calendar(request, calendar_id)
@@ -255,3 +255,59 @@ class CalendarData():
 
         except Exception as e:
             return CalendarDataHelper.handle_server_error(e)
+        
+
+    @staticmethod
+    async def post_note_service(
+        request: Request, 
+        calendar_id: str, 
+        user_email: str
+    ):
+        permissions = await CalendarDataHelper.verify_user_has_calendar_authorization(
+            request, 
+            user_email, 
+            calendar_id
+        )
+
+        if permissions is False or isinstance(permissions, JSONResponse):
+            return JSONResponse(content={
+                'detail': 'We could not validate permissions'}, status_code=404
+            )
+
+        user = await CalendarDataHelper.find_one_user_by_email(
+            request,
+            user_email,
+            projection={
+                'first_name': 1,
+                'last_name': 1,
+                'personal_calendar': 1
+            }
+        )
+
+        calendar_note = await CalendarDataHelper.create_calendar_note(
+            request, 
+            user, 
+            calendar_id
+        )
+
+        if isinstance(calendar_note, JSONResponse):
+            return calendar_note
+        
+        updated_calendar = await CalendarDataHelper.add_note_to_calendar(
+            request,
+            calendar_id,
+            calendar_note['_id'],
+        )
+
+        if isinstance(updated_calendar, JSONResponse):
+            return updated_calendar
+        
+        populated_calendar = await CalendarDataHelper.populate_one_calendar(
+            request,
+            calendar_id,
+        )
+        
+        return JSONResponse(content={
+            'detail': 'Successfully updated calendar with note',
+            'updated_calendar': jsonable_encoder(populated_calendar),
+        }, status_code=200)

@@ -2,7 +2,9 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 from scripts import json_parser
 from fastapi.encoders import jsonable_encoder
-from models.calendar import Calendar, PendingUser
+from models.calendar import Calendar, PendingUser, UserRef, CalendarNote, Event
+from datetime import datetime
+from typing import Optional
 import asyncio
 import logging
 
@@ -285,10 +287,10 @@ class CalendarDataHelper:
 
     @staticmethod
     async def validate_user_and_calendar(
-            request: Request, 
-            user_email: str,
-            calendar_id: str
-        ):
+        request: Request, 
+        user_email: str,
+        calendar_id: str
+    ):
         user = await request.app.db['users'].find_one({'email': user_email})
         calendar = await request.app.db['calendars'].find_one({'_id': calendar_id})
         return user, calendar
@@ -301,10 +303,10 @@ class CalendarDataHelper:
     
     @staticmethod
     def filter_out_user_from_calendar_list(
-            user_id: str, 
-            calendar, 
-            user_type: str
-        ):
+        user_id: str, 
+        calendar, 
+        user_type: str
+    ):
         if user_type == 'authorized':
             calendar['authorized_users'].remove(user_id)
         elif user_type == 'pending':
@@ -319,10 +321,10 @@ class CalendarDataHelper:
 
     @staticmethod
     async def replace_one_calendar(
-            request: Request, 
-            calendar_id: str, 
-            updated_calendar: dict
-        ):
+        request: Request, 
+        calendar_id: str, 
+        updated_calendar: dict
+    ):
         return await request.app.db['calendars'].replace_one(
             {'_id': calendar_id},
             updated_calendar
@@ -333,25 +335,75 @@ class CalendarDataHelper:
     async def find_one_calendar(
         request: Request,
         calendar_id: str,
+        projection: Optional[dict] = None,
     ):
-        return await request.app.db['calendars'].find_one({'_id': calendar_id})
+        return await request.app.db['calendars'].find_one(
+            {'_id': calendar_id}, 
+            projection
+        )
     
 
     @staticmethod
-    async def find_one_user(request: Request, user_id: str):
-        return await request.app.db['users'].find_one({'_id': user_id}, projection={})
+    async def find_one_user(
+        request: Request, 
+        user_id: str,
+        projection: Optional[dict] = None
+    ):
+        return await request.app.db['users'].find_one(
+            {'_id': user_id}, 
+            projection
+        )
+    
+
+    @staticmethod
+    async def find_one_user_by_email(
+        request: Request, 
+        user_email: str,
+        projection: Optional[dict] = None
+    ):
+        return await request.app.db['users'].find_one(
+            {'email': user_email},
+            projection
+        )
     
 
     @staticmethod
     async def add_one_user_to_calendar(
-            request: Request, 
-            calendar_id: str, 
-            converted_user: dict
-        ):
+        request: Request, 
+        calendar_id: str, 
+        converted_user: dict
+    ):
          return await request.app.db['calendars'].update_one(
             {'_id': calendar_id},
             {'$push': {'pending_users': converted_user}}
         )    
+    
+
+    @staticmethod
+    async def create_calendar_note(
+        request: Request, 
+        calendar_note: CalendarNote
+    ):
+        return await request.app.db['calendar_notes'].insert_one(
+            jsonable_encoder(calendar_note)
+        )
+    
+
+    @staticmethod
+    async def find_calendar_note(request: Request, note_id: str):
+        return await request.app.db['calendar_notes'].find_one({'_id': note_id})
+    
+
+    @staticmethod
+    async def add_calendar_note_to_calendar(
+        request: Request, 
+        calendar_id: str, 
+        note_id: str
+    ):
+        return await request.app.db['calendars'].update_one(
+            {'_id': calendar_id},
+            {'$push': {'calendar_notes': note_id}}
+        )
 
 
     @staticmethod
@@ -382,15 +434,15 @@ class CalendarDataHelper:
 
     @staticmethod
     def verify_user_is_in_calendar(
-            updated_calendar: Calendar,
-            permission_type: str,
-            user_id: str
-        ):
-            pending_users = updated_calendar.get('pending_users', [])
-            for pending_user in pending_users:
-                if pending_user['_id'] == user_id and pending_user['type'] == permission_type:
-                    return True
-            return False
+        updated_calendar: Calendar,
+        permission_type: str,
+        user_id: str
+    ):
+        pending_users = updated_calendar.get('pending_users', [])
+        for pending_user in pending_users:
+            if pending_user['_id'] == user_id and pending_user['type'] == permission_type:
+                return True
+        return False
     
 
     @staticmethod
@@ -408,10 +460,10 @@ class CalendarDataHelper:
 
     @staticmethod
     async def remove_calendar_from_users(
-            request: Request, 
-            all_user_ids: list[str], 
-            calendar_id: str
-        ):
+        request: Request, 
+        all_user_ids: list[str], 
+        calendar_id: str
+    ):
         errors = 0
 
         async for user in request.app.db['users'].find({'_id': {'$in': all_user_ids}}):
@@ -450,6 +502,131 @@ class CalendarDataHelper:
         if users_remove_status > 0:
             return logger.warning(f'When attempting to remove calendar from user instances, {users_remove_status}\'s were not removed')
         
+
+    @staticmethod
+    async def verify_user_has_calendar_authorization(
+        request: Request, 
+        user_email: str, 
+        calendar_id: str
+    ):
+        try:
+            user = await CalendarDataHelper.find_one_user_by_email(
+                request, 
+                user_email
+            )
+
+            calendar = await CalendarDataHelper.find_one_calendar(
+                request,
+                calendar_id,
+                projection={'authorized_users': 1}
+            )
+
+            if user is None or calendar is None:
+                return JSONResponse(content={
+                    'detail': 'Failed to verify user or calendar being accessed'}, status_code=404
+                )
+
+            if user['_id'] in calendar['authorized_users']:
+                return True
+            else:
+                return False
+            
+        except Exception as e:
+            return CalendarDataHelper.handle_server_error(e)
+
+
+    @staticmethod
+    async def create_calendar_note(request: Request, user, calendar_id: str):
+        try:
+            calendar_note_object = await json_parser(request=request)
+
+            if isinstance(calendar_note_object, JSONResponse):
+                return calendar_note_object
+
+            created_by_user = user.copy()
+            del created_by_user['personal_calendar']
+
+            user_ref = UserRef(
+                first_name=created_by_user['first_name'],
+                last_name=created_by_user['last_name'],
+                user_id=created_by_user['_id'],
+            )
+
+            calendar_note = CalendarNote(
+                calendar_id=calendar_id,
+                note=calendar_note_object['note'],
+                type=calendar_note_object['noteType'],
+                user_ref=user_ref,
+                start_date=datetime.fromisoformat(calendar_note_object['dates']['startDate']),
+                end_date=datetime.fromisoformat(calendar_note_object['dates']['endDate']),
+            )
+
+            if calendar_note is None:
+                return JSONResponse(content={
+                    'detail': 'The note you posted is not compatible'}, status_code=404
+                )
+
+            upload_note = await CalendarDataHelper.create_calendar_note(request, calendar_note)
+
+            if upload_note is None:
+                return JSONResponse(content={
+                    'detail': 'Failed to upload new note'}, status_code=422
+                )
+            
+            retrieved_note = await CalendarDataHelper.find_calendar_note(
+                request, 
+                upload_note.inserted_id
+            )
+
+            if retrieved_note is None:
+                return JSONResponse(content={
+                    'detail': 'Failed to retrieve uploaded note'}
+                )
+            
+            return retrieved_note
+        
+        except Exception as e:
+            return CalendarDataHelper.handle_server_error(e)
+        
+
+    @staticmethod
+    async def add_note_to_calendar(
+        request: Request,
+        calendar_id: str,
+        note_id: str,
+    ):
+        try:
+            updated_calendar = await CalendarDataHelper.add_calendar_note_to_calendar(
+                request,
+                calendar_id,
+                note_id
+            )
+
+            if updated_calendar is None:
+                return JSONResponse(content={
+                    'detail': 'We could not update that calendar with your note'}, status_code=404
+                )
+            
+            return updated_calendar
+        
+        except Exception as e:
+            return CalendarDataHelper.handle_server_error(e)
+        
+
+    @staticmethod
+    async def retrieve_updated_calendar_with_new_note(request: Request, calendar_id: str):
+        updated_calendar = await CalendarDataHelper.populate_one_calendar(
+            request, 
+            calendar_id
+        )
+
+        if updated_calendar is None:
+            return JSONResponse(content={
+                'detail': 'Failed to retrieve updated calendar with note'}, status_code=422
+            )
+        
+        return updated_calendar
+
         
 class UserProjection:
     user_projection = {
