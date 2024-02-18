@@ -755,3 +755,186 @@ def test_delete_calendar_fails_on_no_user_find(
 
     assert response.status_code == 404
     assert json_response['detail'] == "Invalid data requested"
+
+
+# @pytest.mark.skip(reason='Not implemented')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.handle_remove_user_from_calendar', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.remove_calendar_from_user', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_calendar', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_user', new_callable=AsyncMock)
+def test_user_leave_calendar_request_succeeds(
+        mock_find_one_user,
+        mock_find_one_calendar,
+        mock_remove_calendar_from_user,
+        mock_handle_remove_user_from_calendar,
+        test_client_with_db,
+        generate_test_token,
+    ):
+
+    calendar_id = '456'
+    user_id = '123'
+
+    mock_find_one_user.return_value = {'_id': '123'}
+    mock_find_one_calendar.return_value = {
+        '_id': '456', 
+        'created_by': '999', 
+        'authorized_users': ['123'],
+        'view_only_users': ['000'],
+    }
+    mock_remove_calendar_from_user.return_value = {'_id': '123'}
+    mock_handle_remove_user_from_calendar.return_value = {'_id': '456'}
+
+    response = test_client_with_db.delete(
+        f'calendar/{calendar_id}/leaveCalendar/{user_id}',
+        headers={
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {generate_test_token}',
+            'Content-type': 'application/json',
+        }
+    )
+
+    json_response = response.json()
+
+    assert response.status_code == 200
+    assert json_response['detail'] == "Successfully left calendar"
+    assert 'calendar_id' in json_response
+
+
+# @pytest.mark.skip(reason='Not implemented')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.handle_remove_user_from_calendar', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.remove_calendar_from_user', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_calendar', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_user', new_callable=AsyncMock)
+def test_user_leave_calendar_request_fails_on_failure_to_remove_user_from_calendar(
+        mock_find_one_user,
+        mock_find_one_calendar,
+        mock_remove_calendar_from_user,
+        mock_handle_remove_user_from_calendar,
+        test_client_with_db,
+        generate_test_token,
+    ):
+
+    calendar_id = '456'
+    user_id = '123'
+
+    mock_find_one_user.return_value = {'_id': '123'}
+    mock_find_one_calendar.return_value = {
+        '_id': '456', 
+        'created_by': '999', 
+        'authorized_users': ['123'],
+        'view_only_users': ['000'],
+    }
+    mock_remove_calendar_from_user.return_value = {'_id': '123'}
+    mock_handle_remove_user_from_calendar.return_value = None
+
+    response = test_client_with_db.delete(
+        f'calendar/{calendar_id}/leaveCalendar/{user_id}',
+        headers={
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {generate_test_token}',
+            'Content-type': 'application/json',
+        }
+    )
+
+    json_response = response.json()
+
+    assert response.status_code == 422
+    assert json_response['detail'] == "Failed to complete removal"
+
+
+# @pytest.mark.skip(reason='Not implemented')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.remove_calendar_from_user', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_calendar', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_user', new_callable=AsyncMock)
+def test_user_leave_calendar_request_fails_on_failure_to_remove_calendar_from_user(
+        mock_find_one_user,
+        mock_find_one_calendar,
+        mock_remove_calendar_from_user,
+        test_client_with_db,
+        generate_test_token,
+    ):
+
+    calendar_id = '456'
+    user_id = '123'
+
+    mock_find_one_user.return_value = {'_id': '123'}
+    mock_find_one_calendar.return_value = {
+        '_id': '456', 
+        'created_by': '999', 
+        'authorized_users': ['123'],
+        'view_only_users': ['000'],
+    }
+    mock_remove_calendar_from_user.return_value = None
+    
+    response = test_client_with_db.delete(
+        f'calendar/{calendar_id}/leaveCalendar/{user_id}',
+        headers={
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {generate_test_token}',
+            'Content-type': 'application/json',
+        }
+    )
+
+    json_response = response.json()
+
+    assert response.status_code == 422
+    assert json_response['detail'] == "Failed to complete removal"
+
+
+# @pytest.mark.skip(reason='Not implemented')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_calendar', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_user', new_callable=AsyncMock)
+def test_user_leave_calendar_request_fails_on_no_calendar_found(
+        mock_find_one_user,
+        mock_find_one_calendar,
+        test_client_with_db,
+        generate_test_token,
+    ):
+
+    calendar_id = '456'
+    user_id = '123'
+
+    mock_find_one_user.return_value = {'_id': '123'}
+    mock_find_one_calendar.return_value = None
+    
+    response = test_client_with_db.delete(
+        f'calendar/{calendar_id}/leaveCalendar/{user_id}',
+        headers={
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {generate_test_token}',
+            'Content-type': 'application/json',
+        }
+    )
+
+    json_response = response.json()
+
+    assert response.status_code == 404
+    assert json_response['detail'] == "The user or calendar sent do not exist"
+
+
+# @pytest.mark.skip(reason='Not implemented')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_user', new_callable=AsyncMock)
+def test_user_leave_calendar_request_fails_on_no_user_found(
+        mock_find_one_user,
+        test_client_with_db,
+        generate_test_token,
+    ):
+
+    calendar_id = '456'
+    user_id = '123'
+
+    mock_find_one_user.return_value = None
+    
+    response = test_client_with_db.delete(
+        f'calendar/{calendar_id}/leaveCalendar/{user_id}',
+        headers={
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {generate_test_token}',
+            'Content-type': 'application/json',
+        }
+    )
+
+    json_response = response.json()
+
+    assert response.status_code == 404
+    assert json_response['detail'] == "The user or calendar sent do not exist"

@@ -5,7 +5,7 @@ from unittest import mock
 
 # @pytest.mark.skip(reason='Not implemented')
 def test_new_calendar_route_succeeds(test_client_with_db, generate_test_token):
-    with mock.patch('controllers.calendar_controller.CalendarData.create_new_calendar', new_callable=AsyncMock) as mock_create_new_calendar:
+    with mock.patch('controllers.calendar_controller.CalendarData.create_new_calendar_service', new_callable=AsyncMock) as mock_create_new_calendar:
     
         mock_create_new_calendar.return_value = {
             '_id': '123', 

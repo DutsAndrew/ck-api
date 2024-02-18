@@ -644,9 +644,11 @@ class CalendarDataHelper:
         user_id: str, 
         calendar_id: str,
         authorized_users: list[str], 
-        view_only_users: list[str]
+        view_only_users: list[str],
     ):
         removal_status = None
+
+        print(authorized_users, view_only_users)
 
         if user_id in authorized_users:
             removal_status = await CalendarDataHelper.remove_user_from_calendar(

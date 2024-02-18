@@ -258,7 +258,7 @@ class CalendarData():
         
 
     @staticmethod
-    async def user_leave_calendar_request_service(
+    async def user_leave_calendar_service(
         request: Request, 
         calendar_id: str, 
         user_id: str
@@ -293,8 +293,13 @@ class CalendarData():
 
             if updated_user is None or updated_calendar is None:
                 return JSONResponse(content={
-                    'detail': 'Failed to remove user from calendar'}, status_code=422
+                    'detail': 'Failed to complete removal'}, status_code=422
                 )
+            
+            return JSONResponse(content={
+                'detail': 'Successfully left calendar',
+                'calendar_id': calendar_id,
+            }, status_code=200)
 
         except Exception as e:
             return CalendarDataHelper.handle_server_error(e)

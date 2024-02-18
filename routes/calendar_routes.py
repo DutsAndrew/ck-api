@@ -82,6 +82,21 @@ async def delete_calendar(
         )
 
 
+@calendar_router.delete('/{calendar_id}/leaveCalendar/{user_id}')
+async def leave_calendar(
+        request: Request, 
+        calendar_id: str, 
+        user_id: str, 
+        token: str | bool = Depends(process_bearer_token)
+    ):
+        return await calendar_controller.user_leave_calendar_request(
+            request, 
+            calendar_id, 
+            user_id
+        
+)
+
+
 @calendar_router.post('/{calendar_id}/addNote')
 async def post_calendar_note(
         request: Request,
