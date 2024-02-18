@@ -258,6 +258,50 @@ class CalendarData():
         
 
     @staticmethod
+    async def user_leave_calendar_request_service(
+        request: Request, 
+        calendar_id: str, 
+        user_id: str
+    ):
+        try:
+            user = await CalendarDataHelper.find_one_user(request, user_id)
+            calendar = await CalendarDataHelper.find_one_calendar(request, calendar_id)
+
+            if user is None or calendar is None:
+                return JSONResponse(content={
+                    'detail': 'The user or calendar sent do not exist'}, status_code=404
+                )
+            
+            if calendar['created_by'] == user['_id']:
+                return JSONResponse(content={
+                    'detail': 'You cannot leave a calendar you have created'}, status_code=422
+                )
+            
+            updated_user = await CalendarDataHelper.remove_calendar_from_user(
+                request,
+                user_id,
+                calendar_id,
+            )
+            
+            updated_calendar = await CalendarDataHelper.handle_remove_user_from_calendar(
+                request,
+                user_id,
+                calendar_id,
+                calendar['authorized_users'],
+                calendar['view_only_users'],
+            )
+
+            if updated_user is None or updated_calendar is None:
+                return JSONResponse(content={
+                    'detail': 'Failed to remove user from calendar'}, status_code=422
+                )
+
+        except Exception as e:
+            return CalendarDataHelper.handle_server_error(e)
+
+
+
+    @staticmethod
     async def post_note_service(
         request: Request, 
         calendar_id: str, 

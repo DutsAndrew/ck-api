@@ -107,45 +107,16 @@ async def delete_calendar(
         )
 
 
-async def user_leave_calendar_request(request, calendar_id, user_id):
-    try:
-        calendar = await request.app.db['calendars'].find_one({'_id': calendar_id})
-        user = await request.app.db['users'].find_one({'_id': user_id})
-
-        if calendar is None or user is None:
-            return JSONResponse(content={'detail': 'The user or calendar sent do not exist'}, status_code=404)
-
-        if calendar['created_by'] == user['_id']:
-            return JSONResponse(content={'detail': 'You cannot leave a calendar you have created'})
-
-        updated_user = await request.app.db['users'].update_one(
-            {'_id': user['_id']},
-            {'$pull': {'calendars': calendar['_id']}}
+async def user_leave_calendar_request(
+        request, 
+        calendar_id, 
+        user_id
+    ):
+        return await CalendarData.user_leave_calendar_service(
+            request, 
+            calendar_id, 
+            user_id,
         )
-
-        updated_calendar = None
-        if user['_id'] in calendar['authorized_users']:
-            updated_calendar = await request.app.db['calendars'].update_one(
-                {'_id': calendar['_id']},
-                {'$pull': {'authorized_users': user['_id']}}
-            )
-        if user['_id'] in calendar['view_only_users']:
-            updated_calendar = await request.app.db['calendars'].update_one(
-                {'_id': calendar['_id']},
-                {'$pull': {'view_only_users': user['_id']}}
-            )
-
-        if updated_calendar is None or updated_user is None:
-            return JSONResponse(content={'detail': 'Failed to remove user from calendar'}, status_code=422)
-        
-        return JSONResponse(content={
-            'detail': 'Successfully removed user',
-            'calendar_id_to_remove': calendar['_id']
-        })
-        
-    except Exception as e:
-        logger.error(f"Error processing request: {e}")
-        return JSONResponse(content={'detail': 'There was an issue processing your request'}, status_code=500)
     
 
 async def post_note(

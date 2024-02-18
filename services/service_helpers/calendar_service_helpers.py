@@ -404,6 +404,31 @@ class CalendarDataHelper:
             {'_id': calendar_id},
             {'$push': {'calendar_notes': note_id}}
         )
+    
+
+    @staticmethod
+    async def remove_calendar_from_user(
+        request: Request,
+        user_id: str,
+        calendar_id: str,
+    ):
+        return await request.app.db['users'].update_one(
+            {'_id': user_id},
+            {'$pull': {'calendars': calendar_id}}
+        )
+    
+
+    @staticmethod
+    async def remove_user_from_calendar(
+        request: Request,
+        user_id: str,
+        calendar_id: str,
+        calendar_type: str
+    ):
+        return await request.app.db['calendars'].update_one(
+            {'_id': calendar_id},
+            {'$pull': {calendar_type: user_id}}
+        )
 
 
     @staticmethod
@@ -614,18 +639,32 @@ class CalendarDataHelper:
         
 
     @staticmethod
-    async def retrieve_updated_calendar_with_new_note(request: Request, calendar_id: str):
-        updated_calendar = await CalendarDataHelper.populate_one_calendar(
-            request, 
-            calendar_id
-        )
+    async def handle_remove_user_from_calendar(
+        request: Request,
+        user_id: str, 
+        calendar_id: str,
+        authorized_users: list[str], 
+        view_only_users: list[str]
+    ):
+        removal_status = None
 
-        if updated_calendar is None:
-            return JSONResponse(content={
-                'detail': 'Failed to retrieve updated calendar with note'}, status_code=422
+        if user_id in authorized_users:
+            removal_status = await CalendarDataHelper.remove_user_from_calendar(
+                request,
+                user_id,
+                calendar_id,
+                'authorized_users',
             )
-        
-        return updated_calendar
+
+        if user_id in view_only_users:
+            removal_status = await CalendarDataHelper.remove_user_from_calendar(
+                request,
+                user_id,
+                calendar_id,
+                'view_only_users',
+            )
+
+        return removal_status
 
         
 class UserProjection:
