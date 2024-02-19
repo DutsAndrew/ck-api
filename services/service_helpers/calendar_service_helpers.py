@@ -184,19 +184,31 @@ class CalendarDataHelper:
     
     @staticmethod
     async def upload_calendar_to_db(request: Request, new_calendar: Calendar):
-        calendar_upload = await request.app.db['calendars'].insert_one(jsonable_encoder(new_calendar))
-        return calendar_upload
+        try:
+            calendar_upload = await request.app.db['calendars'].insert_one(jsonable_encoder(new_calendar))
+            return calendar_upload
+        except Exception as e:
+            return CalendarDataHelper.handle_server_error(e)
+
 
     @staticmethod
     async def get_uploaded_calendar(request: Request, calendar_id: str):
-        uploaded_calendar = await request.app.db['calendars'].find_one({'_id': calendar_id})
-        return uploaded_calendar
+        try:
+            uploaded_calendar = await request.app.db['calendars'].find_one({'_id': calendar_id})
+            return uploaded_calendar
+        except Exception as e:
+            return CalendarDataHelper.handle_server_error(e)
+
 
     @staticmethod
     async def update_user_calendars(request: Request, user_id: str, calendar_id: str):
-        updated_user = await request.app.db['users'].update_one(
+        try:
+            updated_user = await request.app.db['users'].update_one(
             {'_id': str(user_id)}, {'$push': {'calendars': calendar_id}})
-        return updated_user
+            return updated_user
+        except Exception as e:
+            return CalendarDataHelper.handle_server_error(e)
+
 
     @staticmethod
     async def update_pending_users(request: Request, pending_users, calendar_id: str):
@@ -291,9 +303,12 @@ class CalendarDataHelper:
         user_email: str,
         calendar_id: str
     ):
-        user = await request.app.db['users'].find_one({'email': user_email})
-        calendar = await request.app.db['calendars'].find_one({'_id': calendar_id})
-        return user, calendar
+        try:
+            user = await request.app.db['users'].find_one({'email': user_email})
+            calendar = await request.app.db['calendars'].find_one({'_id': calendar_id})
+            return user, calendar
+        except Exception as e:
+            return CalendarDataHelper.handle_server_error(e)
     
 
     @staticmethod
@@ -325,10 +340,13 @@ class CalendarDataHelper:
         calendar_id: str, 
         updated_calendar: dict
     ):
-        return await request.app.db['calendars'].replace_one(
-            {'_id': calendar_id},
-            updated_calendar
-        )
+        try:
+            return await request.app.db['calendars'].replace_one(
+                {'_id': calendar_id},
+                updated_calendar
+            )
+        except Exception as e:
+            return CalendarDataHelper.handle_server_error(e)
     
 
     @staticmethod
@@ -337,10 +355,13 @@ class CalendarDataHelper:
         calendar_id: str,
         projection: Optional[dict] = None,
     ):
-        return await request.app.db['calendars'].find_one(
-            {'_id': calendar_id}, 
-            projection
-        )
+        try:
+            return await request.app.db['calendars'].find_one(
+                {'_id': calendar_id}, 
+                projection
+            )
+        except Exception as e:
+            return CalendarDataHelper.handle_server_error(e)
     
 
     @staticmethod
@@ -349,10 +370,13 @@ class CalendarDataHelper:
         user_id: str,
         projection: Optional[dict] = None
     ):
-        return await request.app.db['users'].find_one(
-            {'_id': user_id}, 
-            projection
-        )
+        try:
+            return await request.app.db['users'].find_one(
+                {'_id': user_id}, 
+                projection
+            )
+        except Exception as e:
+            return CalendarDataHelper.handle_server_error(e)
     
 
     @staticmethod
@@ -361,10 +385,19 @@ class CalendarDataHelper:
         user_email: str,
         projection: Optional[dict] = None
     ):
-        return await request.app.db['users'].find_one(
-            {'email': user_email},
-            projection
-        )
+        try:
+            user = await request.app.db['users'].find_one(
+                {'email': user_email},
+                projection
+            )
+
+            if user is None:
+                return JSONResponse(content={
+                    'detail': 'User not found'}, status_code=404
+                )
+
+        except Exception as e:
+            return CalendarDataHelper.handle_server_error(e)
     
 
     @staticmethod
@@ -373,25 +406,40 @@ class CalendarDataHelper:
         calendar_id: str, 
         converted_user: dict
     ):
-         return await request.app.db['calendars'].update_one(
-            {'_id': calendar_id},
-            {'$push': {'pending_users': converted_user}}
-        )    
+        try:
+            return await request.app.db['calendars'].update_one(
+                {'_id': calendar_id},
+                {'$push': {'pending_users': converted_user}}
+            )
+        except Exception as e:
+            return CalendarDataHelper.handle_server_error(e)
     
 
     @staticmethod
-    async def upload_calendar_note(
+    async def create_calendar_note(
         request: Request, 
         calendar_note: CalendarNote
     ):
-        return await request.app.db['calendar_notes'].insert_one(
-            jsonable_encoder(calendar_note)
-        )
+        try:
+            uploaded_note = await request.app.db['calendar_notes'].insert_one(
+                jsonable_encoder(calendar_note)
+            )
+
+            if uploaded_note is None:
+                return JSONResponse(content={
+                    'detail': 'Failed to upload new note'}, status_code=422
+                )
+            
+        except Exception as e:
+            return CalendarDataHelper.handle_server_error(e)
     
 
     @staticmethod
     async def find_calendar_note(request: Request, note_id: str):
-        return await request.app.db['calendar_notes'].find_one({'_id': note_id})
+        try:
+            return await request.app.db['calendar_notes'].find_one({'_id': note_id})
+        except Exception as e:
+            return CalendarDataHelper.handle_server_error(e)
     
 
     @staticmethod
@@ -400,10 +448,13 @@ class CalendarDataHelper:
         calendar_id: str, 
         note_id: str
     ):
-        return await request.app.db['calendars'].update_one(
-            {'_id': calendar_id},
-            {'$push': {'calendar_notes': note_id}}
-        )
+        try:
+            return await request.app.db['calendars'].update_one(
+                {'_id': calendar_id},
+                {'$push': {'calendar_notes': note_id}}
+            )
+        except Exception as e:  
+            return CalendarDataHelper.handle_server_error(e)
     
 
     @staticmethod
@@ -412,11 +463,14 @@ class CalendarDataHelper:
         user_id: str,
         calendar_id: str,
     ):
-        return await request.app.db['users'].update_one(
-            {'_id': user_id},
-            {'$pull': {'calendars': calendar_id}}
-        )
-    
+        try:
+            return await request.app.db['users'].update_one(
+                {'_id': user_id},
+                {'$pull': {'calendars': calendar_id}}
+            )
+        except Exception as e:
+            return CalendarDataHelper.handle_server_error(e)
+        
 
     @staticmethod
     async def remove_user_from_calendar(
@@ -425,10 +479,63 @@ class CalendarDataHelper:
         calendar_id: str,
         calendar_type: str
     ):
-        return await request.app.db['calendars'].update_one(
-            {'_id': calendar_id},
-            {'$pull': {calendar_type: user_id}}
-        )
+        try:
+            return await request.app.db['calendars'].update_one(
+                {'_id': calendar_id},
+                {'$pull': {calendar_type: user_id}}
+            )
+        except Exception as e:
+            return CalendarDataHelper.handle_server_error(e)
+        
+
+    @staticmethod
+    async def remove_all_calendar_events(
+        request: Request, 
+        calendar_events: list[str]
+    ):
+        removal_amount = len(calendar_events)
+
+        try:
+            event_removal_status = await request.app.db['events'].delete_many({
+                '_id': {'$in': calendar_events}}
+            )
+
+            actual_removal_amount = event_removal_status.deleted_count
+
+            if actual_removal_amount != removal_amount:
+                CalendarDataHelper.log_event_removal_status(
+                    removal_amount - actual_removal_amount
+                )
+
+            return
+
+        except Exception as e:
+            return CalendarDataHelper.handle_server_error(e)
+        
+
+    @staticmethod
+    async def remove_all_calendar_notes(
+        request: Request,
+        calendar_notes: list[str],
+    ):
+        removal_amount = len(calendar_notes)
+
+        try:
+            note_removal_status = await request.app.db['calendar_notes'].delete_many({
+                '_id': {'$in': calendar_notes}}
+            )
+
+            actual_removal_amount = note_removal_status.deleted_count
+
+            if actual_removal_amount != removal_amount:
+                CalendarDataHelper.log_note_removal_status(
+                    removal_amount - actual_removal_amount
+                )
+
+            return
+
+        except Exception as e:
+            return CalendarDataHelper.handle_server_error(e)
 
 
     @staticmethod
@@ -529,6 +636,18 @@ class CalendarDataHelper:
         
 
     @staticmethod
+    def log_event_removal_status(events_remove_status: int):
+        if events_remove_status > 0:
+            return logger.warning(f'When attempting to remove events from a calendar, {events_remove_status} events were not removed')
+
+
+    @staticmethod
+    def log_note_removal_status(notes_remove_status: int):
+        if notes_remove_status > 0:
+            return logger.warning(f'When attempting to remove notes from a calendar, {notes_remove_status} notes were not removed')
+
+
+    @staticmethod
     async def verify_user_has_calendar_authorization(
         request: Request, 
         user_email: str, 
@@ -561,11 +680,7 @@ class CalendarDataHelper:
 
 
     @staticmethod
-    async def create_calendar_note(
-        request: Request, 
-        user, 
-        calendar_id: str
-    ):
+    async def create_calendar_note(request: Request, user, calendar_id: str):
         try:
             calendar_note_object = await json_parser(request=request)
 
@@ -651,8 +766,6 @@ class CalendarDataHelper:
         view_only_users: list[str],
     ):
         removal_status = None
-
-        print(authorized_users, view_only_users)
 
         if user_id in authorized_users:
             removal_status = await CalendarDataHelper.remove_user_from_calendar(

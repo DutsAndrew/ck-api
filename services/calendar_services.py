@@ -230,13 +230,27 @@ class CalendarData():
             
             all_user_ids = CalendarDataHelper.group_all_user_ids_in_calendar(calendar, user['_id'])
 
-            users_remove_status = await CalendarDataHelper.remove_calendar_from_users(
-                request, 
-                all_user_ids,
-                calendar_id
-            )
+            users_remove_status = 0
+            if (len(all_user_ids) > 0):
+                users_remove_status = await CalendarDataHelper.remove_calendar_from_users(
+                    request, 
+                    all_user_ids,
+                    calendar_id
+                )
 
             CalendarDataHelper.log_user_removal_status(users_remove_status)
+
+            if (len(calendar['events']) > 0):
+                await CalendarDataHelper.remove_all_calendar_events(
+                    request,
+                    calendar['events'],
+                )
+
+            if (len(calendar['notes']) > 0):
+                await CalendarDataHelper.remove_all_calendar_notes(
+                    request,
+                    calendar['notes'],
+                )
 
             delete_calendar = await CalendarDataHelper.delete_one_calendar(
                 request,
@@ -270,11 +284,6 @@ class CalendarData():
             if user is None or calendar is None:
                 return JSONResponse(content={
                     'detail': 'The user or calendar sent do not exist'}, status_code=404
-                )
-            
-            if calendar['created_by'] == user['_id']:
-                return JSONResponse(content={
-                    'detail': 'You cannot leave a calendar you have created'}, status_code=422
                 )
             
             updated_user = await CalendarDataHelper.remove_calendar_from_user(
@@ -312,51 +321,63 @@ class CalendarData():
         calendar_id: str, 
         user_email: str
     ):
-        permissions = await CalendarDataHelper.verify_user_has_calendar_authorization(
-            request, 
-            user_email, 
-            calendar_id
-        )
-
-        if permissions is False or isinstance(permissions, JSONResponse):
-            return JSONResponse(content={
-                'detail': 'We could not validate permissions'}, status_code=404
+        try:
+            permissions = await CalendarDataHelper.verify_user_has_calendar_authorization(
+                request, 
+                user_email, 
+                calendar_id
             )
 
-        user = await CalendarDataHelper.find_one_user_by_email(
-            request,
-            user_email,
-            projection={
-                'first_name': 1,
-                'last_name': 1,
-                'personal_calendar': 1
-            }
-        )
+            if permissions is False or isinstance(permissions, JSONResponse):
+                return JSONResponse(content={
+                    'detail': 'We could not validate permissions'}, status_code=404
+                )
 
-        calendar_note = await CalendarDataHelper.create_calendar_note(
-            request, 
-            user, 
-            calendar_id
-        )
+            user = await CalendarDataHelper.find_one_user_by_email(
+                request,
+                user_email,
+                projection={
+                    'first_name': 1,
+                    'last_name': 1,
+                    'personal_calendar': 1
+                }
+            )
 
-        if isinstance(calendar_note, JSONResponse):
-            return calendar_note
-        
-        updated_calendar = await CalendarDataHelper.add_note_to_calendar(
-            request,
-            calendar_id,
-            calendar_note['_id'],
-        )
+            if isinstance(user, JSONResponse):
+                return user
 
-        if isinstance(updated_calendar, JSONResponse):
-            return updated_calendar
-        
-        populated_calendar = await CalendarDataHelper.populate_one_calendar(
-            request,
-            calendar_id,
-        )
-        
-        return JSONResponse(content={
-            'detail': 'Successfully updated calendar with note',
-            'updated_calendar': jsonable_encoder(populated_calendar),
-        }, status_code=200)
+            calendar_note = await CalendarDataHelper.create_calendar_note(
+                request, 
+                user, 
+                calendar_id
+            )
+
+            if isinstance(calendar_note, JSONResponse):
+                return calendar_note
+            
+            updated_calendar = await CalendarDataHelper.add_note_to_calendar(
+                request,
+                calendar_id,
+                calendar_note['_id'],
+            )
+
+            if isinstance(updated_calendar, JSONResponse):
+                return updated_calendar
+            
+            populated_calendar = await CalendarDataHelper.populate_one_calendar(
+                request,
+                calendar_id,
+            )
+
+            if populated_calendar is None:
+                return JSONResponse(content={
+                    'detail': 'Failed to refetch updated calendar with note'}, status_code=404
+                )
+            
+            return JSONResponse(content={
+                'detail': 'Successfully updated calendar with note',
+                'updated_calendar': jsonable_encoder(populated_calendar),
+            }, status_code=200)
+      
+        except Exception as e:
+            return CalendarDataHelper.handle_server_error(e)
