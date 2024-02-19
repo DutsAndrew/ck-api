@@ -98,6 +98,7 @@ class CalendarData():
             if (user is None or 
                 calendar is None or 
                 user_id == calendar['created_by'] or 
+                user['_id'] not in calendar['authorized_users'] or
                 not CalendarDataHelper.has_calendar_permissions(user, calendar)
                 ):
                 return JSONResponse(content={
@@ -152,6 +153,7 @@ class CalendarData():
             if (user is None or 
                 calendar is None or 
                 user_id == calendar['created_by'] or 
+                user['_id'] not in calendar['authorized_users'] or
                 not CalendarDataHelper.has_calendar_permissions(user, calendar)
                 ):
                 return JSONResponse(content={
@@ -447,5 +449,75 @@ class CalendarData():
                 'updated_note': jsonable_encoder(updated_note),
             }, status_code=200)
 
+        except Exception as e:
+            return CalendarDataHelper.handle_server_error(e)
+        
+  
+    @staticmethod
+    async def delete_note_service(
+        request: Request,
+        calendar_id: str,
+        note_id: str,
+        user_email,
+    ):
+        try:
+            permissions = await CalendarDataHelper.verify_user_has_calendar_authorization(
+                request, 
+                user_email, 
+                calendar_id
+            )
+
+            if permissions is False or isinstance(permissions, JSONResponse):
+                return JSONResponse(content={
+                    'detail': 'We could not validate permissions'}, status_code=404
+            )
+            
+            calendar = await CalendarDataHelper.find_one_calendar(
+                request, 
+                calendar_id
+            )
+
+            note = await CalendarDataHelper.find_one_calendar_note(
+                request,
+                note_id,
+            )
+
+            if calendar is None or note is None:
+                return JSONResponse(content={
+                    'detail': 'Invalid data requested'}, status_code=404
+                )
+            
+            note_deletion_status = await CalendarDataHelper.delete_note(
+                request,
+                note_id,
+            )
+
+            if isinstance(note_deletion_status, JSONResponse):
+                return note_deletion_status
+
+            note_removal_status = await CalendarDataHelper.remove_note_from_calendar(
+                request,
+                calendar_id,
+                note_id,
+            )
+
+            if isinstance(note_removal_status, JSONResponse):
+                return note_removal_status
+            
+            populated_calendar = await CalendarDataHelper.populate_one_calendar(
+                request,
+                calendar_id,
+            )
+
+            if populated_calendar is None:
+                return JSONResponse(content={
+                    'detail': 'we failed to populate an updated calendar without the note, but the note was removed'}, 
+                status_code=422)
+            
+            return JSONResponse(content={
+                'detail': 'Success! Calendar was updated, note was removed',
+                'updated_calendar': populated_calendar,
+            }, status_code=200)
+        
         except Exception as e:
             return CalendarDataHelper.handle_server_error(e)

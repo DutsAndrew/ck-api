@@ -137,7 +137,8 @@ async def delete_calendar_note(
         return await calendar_controller.delete_note(
                request, 
                calendar_id, 
-               calendar_note_id
+               calendar_note_id,
+               token['email'],
         )
 
 

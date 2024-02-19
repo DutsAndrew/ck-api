@@ -576,6 +576,46 @@ class CalendarDataHelper:
 
         except Exception as e:
             return CalendarDataHelper.handle_server_error(e)
+        
+
+    @staticmethod
+    async def delete_note(
+        request: Request,
+        note_id: str,
+    ):
+        try:
+            note_delete = await request.app.db['calendar_notes'].delete_one(
+                {'_id': note_id}
+            )
+
+            if note_delete is None:
+                return JSONResponse(content={
+                    'detail': 'Failed to delete note'}, status_code=422
+                )
+
+        except Exception as e:
+            return CalendarDataHelper.handle_server_error(e)
+        
+
+    @staticmethod
+    async def remove_note_from_calendar(
+        request: Request,
+        calendar_id: str,
+        note_id: str,
+    ):
+        try:
+            removal_status = await request.app.db['calendars'].update_one(
+                {'_id': calendar_id},
+                {'$pull': {'calendar_notes': note_id}}
+            )
+
+            if removal_status is None:
+                return JSONResponse(content={
+                    'detail': 'Failed to remove note from calendar'}, status_code=422
+                )
+
+        except Exception as e:
+            return CalendarDataHelper.handle_server_error(e)
 
 
     @staticmethod
