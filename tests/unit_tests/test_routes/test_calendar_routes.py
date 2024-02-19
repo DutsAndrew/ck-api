@@ -168,3 +168,117 @@ def test_add_user_to_calendar_route_succeeds(test_client_with_db, generate_test_
         assert response.status_code == 200
         assert response.json()['detail'] == 'We successfully added user to your calendar'
         assert 'updated_calendar' in response.json()
+
+
+# @pytest.mark.skip(reason='Not implemented')
+def test_add_calendar_note_to_calendar_route_succeeds(test_client_with_db, generate_test_token):
+    with mock.patch('controllers.calendar_controller.CalendarData.post_note_service', new_callable=AsyncMock) as mock_add_user_to_calendar_service:
+    
+        mock_add_user_to_calendar_service.return_value = {
+            'detail': 'Successfully updated calendar with note',
+            'updated_calendar': {'_id': '123'},
+        }
+
+        response = test_client_with_db.post(
+            'calendar/123/addNote',
+            headers={
+                'Accept': 'application/json',
+                'Authorization': f'Bearer {generate_test_token}',
+                'Content-type': 'application/json',
+            },
+            json={
+                'createdBy': 'John Wick',
+                'note': 'This is a note',
+                'noteType': 'mischievous',
+                'dates': {
+                    'start_date': '2022-01-01 00:00:00',
+                    'end_date': '2022-01-01 23:59:59',
+                }
+            }
+        )
+
+        assert response.status_code == 200
+        assert response.json()['detail'] == 'Successfully updated calendar with note'
+        assert 'updated_calendar' in response.json()
+
+
+# @pytest.mark.skip(reason='Not implemented')
+def test_add_calendar_note_to_calendar_route_fails_on_missing_data(test_client_with_db, generate_test_token):
+    with mock.patch('controllers.calendar_controller.CalendarData.post_note_service', new_callable=AsyncMock) as mock_add_user_to_calendar_service:
+    
+        mock_add_user_to_calendar_service.return_value = {
+            'detail': 'Successfully updated calendar with note',
+            'updated_calendar': {'_id': '123'},
+        }
+
+        response = test_client_with_db.post(
+            'calendar/123/addNote',
+            headers={
+                'Accept': 'application/json',
+                'Authorization': f'Bearer {generate_test_token}',
+                'Content-type': 'application/json',
+            },
+            json={
+                'createdBy': 'John Wick',
+                'noteType': 'mischievous',
+                'dates': {
+                    'start_date': '2022-01-01 00:00:00',
+                    'end_date': '2022-01-01 23:59:59',
+                }
+            }
+        )
+
+        response_json = response.json()
+
+        assert response.status_code == 422
+        
+        assert 'detail' in response_json
+        detail = response_json['detail']
+        assert isinstance(detail, list) and len(detail) == 1
+        
+        error = detail[0]
+        assert error['type'] == 'missing'
+        assert error['loc'] == ['body', 'note']
+        assert error['msg'] == 'Field required'
+
+
+# @pytest.mark.skip(reason='Not implemented')
+def test_add_calendar_note_to_calendar_route_fails_on_extra_data_sent(test_client_with_db, generate_test_token):
+    with mock.patch('controllers.calendar_controller.CalendarData.post_note_service', new_callable=AsyncMock) as mock_add_user_to_calendar_service:
+    
+        mock_add_user_to_calendar_service.return_value = {
+            'detail': 'Successfully updated calendar with note',
+            'updated_calendar': {'_id': '123'},
+        }
+
+        response = test_client_with_db.post(
+            'calendar/123/addNote',
+            headers={
+                'Accept': 'application/json',
+                'Authorization': f'Bearer {generate_test_token}',
+                'Content-type': 'application/json',
+            },
+            json={
+                'alligators': True,
+                'createdBy': 'John Wick',
+                'note': 'This is a note',
+                'noteType': 'mischievous',
+                'dates': {
+                    'start_date': '2022-01-01 00:00:00',
+                    'end_date': '2022-01-01 23:59:59',
+                }
+            }
+        )
+
+        response_json = response.json()
+
+        assert response.status_code == 422
+        
+        assert 'detail' in response_json
+        detail = response_json['detail']
+        assert isinstance(detail, list) and len(detail) == 1
+        
+        error = detail[0]
+        assert error['type'] == 'extra_forbidden'
+        assert error['loc'] == ['body', 'alligators']
+        assert error['msg'] == 'Extra inputs are not permitted'

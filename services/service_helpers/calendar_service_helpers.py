@@ -380,7 +380,7 @@ class CalendarDataHelper:
     
 
     @staticmethod
-    async def create_calendar_note(
+    async def upload_calendar_note(
         request: Request, 
         calendar_note: CalendarNote
     ):
@@ -561,7 +561,11 @@ class CalendarDataHelper:
 
 
     @staticmethod
-    async def create_calendar_note(request: Request, user, calendar_id: str):
+    async def create_calendar_note(
+        request: Request, 
+        user, 
+        calendar_id: str
+    ):
         try:
             calendar_note_object = await json_parser(request=request)
 

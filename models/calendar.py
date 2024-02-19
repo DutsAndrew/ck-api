@@ -110,6 +110,16 @@ class ClientNewCalendarData(BaseModel):
 
      class Config:
           extra = Extra.forbid
+
+
+class CalendarNoteData(BaseModel):
+  createdBy: str
+  note: str
+  noteType: str
+  dates: dict[str, str] = Field(default_factory=dict)
+
+  class Config:
+    extra = Extra.forbid
     
 # CALENDAR TYPES CAN BE THE FOLLOWING:
     # PERSONAL - EACH USER HAS ONE

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, Depends
 from controllers import calendar_controller
-from models.calendar import ClientNewCalendarData
+from models.calendar import ClientNewCalendarData, CalendarNoteData
 from scripts.jwt_token_decoders import process_bearer_token
 
 calendar_router = APIRouter()
@@ -100,6 +100,7 @@ async def leave_calendar(
 @calendar_router.post('/{calendar_id}/addNote')
 async def post_calendar_note(
         request: Request,
+        calendar_note: CalendarNoteData,
         calendar_id: str,
         token: str | bool = Depends(process_bearer_token)
      ):

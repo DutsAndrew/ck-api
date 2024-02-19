@@ -938,3 +938,5 @@ def test_user_leave_calendar_request_fails_on_no_user_found(
 
     assert response.status_code == 404
     assert json_response['detail'] == "The user or calendar sent do not exist"
+
+
