@@ -1213,3 +1213,260 @@ def test_user_add_calendar_note_fails_on_no_calendar_permissions(
 
     assert response.status_code == 404
     assert json_response['detail'] == "We could not validate permissions"
+
+
+# @pytest.mark.skip(reason='Not implemented')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.update_calendar_note', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.handle_move_calendar_note_to_new_calendar', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.create_updated_note', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_calendar_note', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.verify_user_has_calendar_authorization', new_callable=AsyncMock)
+def test_update_calendar_note_succeeds(
+        mock_verify_user_has_calendar_authorization,
+        mock_find_one_calendar_note,
+        mock_create_updated_note,
+        mock_handle_move_calendar_note_to_new_calendar,
+        mock_update_calendar_note,
+        test_client_with_db,
+        generate_test_token,
+    ):
+
+    mock_verify_user_has_calendar_authorization.return_value = True
+    mock_find_one_calendar_note.return_value = {'_id': '111', 'calendar_id': '456'}
+    mock_create_updated_note.return_value = {'_id': '111'}
+    mock_handle_move_calendar_note_to_new_calendar.return_value = {'_id': '555'}
+    mock_update_calendar_note.return_value = {'_id': '111'}
+
+    response = test_client_with_db.put(
+        f'calendar/456/updateNote/111',
+        headers={
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {generate_test_token}',
+            'Content-type': 'application/json',
+        },
+        json={
+            'createdBy': 'John Wick',
+            'note': 'This is a note',
+            'noteType': 'mischievous',
+            'dates': {
+                'start_date': '2022-01-01 00:00:00',
+                'end_date': '2022-01-01 23:59:59',
+            }
+        }
+    )
+
+    json_response = response.json()
+
+    assert response.status_code == 200
+    assert json_response['detail'] == "Successfully updated the note"
+
+
+# @pytest.mark.skip(reason='Not implemented')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.update_calendar_note', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.handle_move_calendar_note_to_new_calendar', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.create_updated_note', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_calendar_note', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.verify_user_has_calendar_authorization', new_callable=AsyncMock)
+def test_update_calendar_note_fails_on_calendar_note_not_updated(
+        mock_verify_user_has_calendar_authorization,
+        mock_find_one_calendar_note,
+        mock_create_updated_note,
+        mock_handle_move_calendar_note_to_new_calendar,
+        mock_update_calendar_note,
+        test_client_with_db,
+        generate_test_token,
+    ):
+
+    mock_verify_user_has_calendar_authorization.return_value = True
+    mock_find_one_calendar_note.return_value = {'_id': '111', 'calendar_id': '456'}
+    mock_create_updated_note.return_value = {'_id': '111'}
+    mock_handle_move_calendar_note_to_new_calendar.return_value = {'_id': '555'}
+    mock_update_calendar_note.return_value = JSONResponse({
+        'detail': 'Failed to update note'
+    }, status_code=422)
+
+    response = test_client_with_db.put(
+        f'calendar/456/updateNote/111',
+        headers={
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {generate_test_token}',
+            'Content-type': 'application/json',
+        },
+        json={
+            'createdBy': 'John Wick',
+            'note': 'This is a note',
+            'noteType': 'mischievous',
+            'dates': {
+                'start_date': '2022-01-01 00:00:00',
+                'end_date': '2022-01-01 23:59:59',
+            }
+        }
+    )
+
+    json_response = response.json()
+
+    assert response.status_code == 422
+    assert json_response['detail'] == "Failed to update note"
+
+
+# @pytest.mark.skip(reason='Not implemented')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.handle_move_calendar_note_to_new_calendar', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.create_updated_note', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_calendar_note', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.verify_user_has_calendar_authorization', new_callable=AsyncMock)
+def test_update_calendar_note_fails_on_failure_to_migrate_calendars(
+        mock_verify_user_has_calendar_authorization,
+        mock_find_one_calendar_note,
+        mock_create_updated_note,
+        mock_handle_move_calendar_note_to_new_calendar,
+        test_client_with_db,
+        generate_test_token,
+    ):
+
+    mock_verify_user_has_calendar_authorization.return_value = True
+    mock_find_one_calendar_note.return_value = {'_id': '111', 'calendar_id': '456'}
+    mock_create_updated_note.return_value = {'_id': '111'}
+
+    # THIS IS ONLY TESTING THE FAILURE TO REMOVE FROM ORIGINAL CALENDAR
+    # DID NOT WRITE A SECOND TEST TO MOCK FAILURE TO ADD TO NEW CALENDAR AS IT WAS REDUNDANT
+    mock_handle_move_calendar_note_to_new_calendar.return_value = JSONResponse({
+        'detail': 'We failed to remove the note from that calendar'
+    }, status_code=422)
+
+    response = test_client_with_db.put(
+        f'calendar/456/updateNote/111',
+        headers={
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {generate_test_token}',
+            'Content-type': 'application/json',
+        },
+        json={
+            'createdBy': 'John Wick',
+            'note': 'This is a note',
+            'noteType': 'mischievous',
+            'dates': {
+                'start_date': '2022-01-01 00:00:00',
+                'end_date': '2022-01-01 23:59:59',
+            }
+        }
+    )
+
+    json_response = response.json()
+
+    assert response.status_code == 422
+    assert json_response['detail'] == "We failed to remove the note from that calendar"
+
+
+# @pytest.mark.skip(reason='Not implemented')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.create_updated_note', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_calendar_note', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.verify_user_has_calendar_authorization', new_callable=AsyncMock)
+def test_update_calendar_note_fails_on_failure_to_create_updated_note(
+        mock_verify_user_has_calendar_authorization,
+        mock_find_one_calendar_note,
+        mock_create_updated_note,
+        test_client_with_db,
+        generate_test_token,
+    ):
+
+    mock_verify_user_has_calendar_authorization.return_value = True
+    mock_find_one_calendar_note.return_value = {'_id': '111', 'calendar_id': '456'}
+    mock_create_updated_note.return_value = JSONResponse({
+        'detail': 'The note you posted is not compatible'
+    }, status_code=404)
+
+    response = test_client_with_db.put(
+        f'calendar/456/updateNote/111',
+        headers={
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {generate_test_token}',
+            'Content-type': 'application/json',
+        },
+        json={
+            'createdBy': 'John Wick',
+            'note': 'This is a note',
+            'noteType': 'mischievous',
+            'dates': {
+                'start_date': '2022-01-01 00:00:00',
+                'end_date': '2022-01-01 23:59:59',
+            }
+        }
+    )
+
+    json_response = response.json()
+
+    assert response.status_code == 404
+    assert json_response['detail'] == "The note you posted is not compatible"
+
+
+# @pytest.mark.skip(reason='Not implemented')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_calendar_note', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.verify_user_has_calendar_authorization', new_callable=AsyncMock)
+def test_update_calendar_note_fails_on_no_calendar_note_found(
+        mock_verify_user_has_calendar_authorization,
+        mock_find_one_calendar_note,
+        test_client_with_db,
+        generate_test_token,
+    ):
+
+    mock_verify_user_has_calendar_authorization.return_value = True
+    mock_find_one_calendar_note.return_value = None
+
+    response = test_client_with_db.put(
+        f'calendar/456/updateNote/111',
+        headers={
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {generate_test_token}',
+            'Content-type': 'application/json',
+        },
+        json={
+            'createdBy': 'John Wick',
+            'note': 'This is a note',
+            'noteType': 'mischievous',
+            'dates': {
+                'start_date': '2022-01-01 00:00:00',
+                'end_date': '2022-01-01 23:59:59',
+            }
+        }
+    )
+
+    json_response = response.json()
+
+    assert response.status_code == 404
+    assert json_response['detail'] == "That note could not be found"
+
+
+# @pytest.mark.skip(reason='Not implemented')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.verify_user_has_calendar_authorization', new_callable=AsyncMock)
+def test_update_calendar_note_fails_on_no_calendar_permissions(
+        mock_verify_user_has_calendar_authorization,
+        test_client_with_db,
+        generate_test_token,
+    ):
+
+    mock_verify_user_has_calendar_authorization.return_value = JSONResponse({
+        'detail': 'You do not have permission to update that note'
+    }, status_code=404)
+
+    response = test_client_with_db.put(
+        f'calendar/456/updateNote/111',
+        headers={
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {generate_test_token}',
+            'Content-type': 'application/json',
+        },
+        json={
+            'createdBy': 'John Wick',
+            'note': 'This is a note',
+            'noteType': 'mischievous',
+            'dates': {
+                'start_date': '2022-01-01 00:00:00',
+                'end_date': '2022-01-01 23:59:59',
+            }
+        }
+    )
+
+    json_response = response.json()
+
+    assert response.status_code == 404
+    assert json_response['detail'] == "We could not validate permissions"

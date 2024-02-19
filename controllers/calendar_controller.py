@@ -131,134 +131,18 @@ async def post_note(
         )
     
 
-async def update_note(request: Request, calendar_id: str, note_id: str, user_making_request_email: str):
-    permissions = await verify_user_has_calendar_authorization(request, user_making_request_email, calendar_id)
-    if permissions is False or isinstance(permissions, JSONResponse):
-        return JSONResponse(content={'detail': 'We could not validate permissions'}, status_code=404)
-
-    note = await request.app.db['calendar_notes'].find_one({'_id': note_id})
-    
-    if note is None:
-        return JSONResponse(content={'detail': 'That note could not be found'})
-    
-    updated_note = await create_updated_note(
-        request, 
-        note, 
-        calendar_id, 
-    )
-
-    if isinstance(updated_note, JSONResponse):
-        return updated_note
-
-    if updated_note is None:
-      return JSONResponse(content={'detail': 'We were unable to create an updated version of that note'}, status_code=422)
-        
-    remove_note_from_calendar = await remove_note_from_previous_calendar(
-        request,
-        note,
-        calendar_id,
-    )
-
-    if isinstance(remove_note_from_calendar, JSONResponse):
-        return remove_note_from_calendar
-    
-    add_note_to_calendar = await add_note_to_calendar_on_update(
-        request,
-        calendar_id,
-        note['_id'],
-    )
-
-    if isinstance(add_note_to_calendar, JSONResponse):
-        return add_note_to_calendar
-            
-    upload_updated_note = await request.app.db['calendar_notes'].update_one(
-        {'_id': note_id},
-        {'$set': jsonable_encoder(updated_note)}
-    )
-
-    if upload_updated_note is None:
-        return JSONResponse(content={'detail': 'We were unable to update the previous note version'}, status_code=404)
-    
-    return JSONResponse(content={
-        'detail': 'Successfully updated the note',
-        'updated_note': jsonable_encoder(updated_note),
-    }, status_code=200)
-
-
-async def create_updated_note(request: Request, note: CalendarNote, calendar_id: str):
-    try:
-        calendar_note_object = await json_parser(request=request)
-
-        if isinstance(calendar_note_object, JSONResponse):
-            return calendar_note_object
-
-        user_ref = UserRef(
-            first_name=note['created_by']['first_name'],
-            last_name=note['created_by']['last_name'],
-            user_id=note['created_by']['user_id'],
-        )
-
-        calendar_note = CalendarNote(
-            calendar_id=calendar_id,
-            note=calendar_note_object['note'],
-            type=calendar_note_object['noteType'],
-            user_ref=user_ref,
-            start_date=datetime.fromisoformat(calendar_note_object['dates']['startDate']),
-            end_date=datetime.fromisoformat(calendar_note_object['dates']['endDate']),
-            id=note['_id'],
-        )
-
-        if calendar_note is None:
-            return JSONResponse(content={'detail': 'The note you posted is not compatible'}, status_code=404)
-        
-        return calendar_note
-    
-    except (ValueError, TypeError, ValidationError) as e:
-        logger.error(f"Calendar note could not be updated: {e}")
-        return JSONResponse(content={'detail': 'There was an error updating that calendar note'}, status_code=422)
-    
-
-async def remove_note_from_previous_calendar(
-        request: Request,
-        note: CalendarNote,
-        calendar_id: str,
-    ):
-        try:
-            if note['calendar_id'] is not calendar_id:
-                remove_note_from_calendar = await request.app.db['calendars'].update_one(
-                    {'_id': note['calendar_id']},
-                    {'$pull': {'calendar_notes': note['_id']}}
-                )
-                if remove_note_from_calendar is None:
-                    return JSONResponse(content={'detail': 'We failed to remove the note from that calendar'}, status_code=422)
-                else:
-                    return
-            else:
-                return
-            
-        except Exception as e:
-            logger.error(f"Calendar note could not be removed from the requested calendar: {e}")
-            return JSONResponse(content={'detail': 'There was an error removing the note from it\'s previous calendar'}, status_code=422)
-        
-
-async def add_note_to_calendar_on_update(
+async def update_note(
         request: Request, 
         calendar_id: str, 
         note_id: str, 
+        user_email: str
     ):
-        try:
-            calendar_to_update = await request.app.db['calendars'].update_one(
-                {'_id': calendar_id},
-                {'$push': {'calendar_notes': note_id}}
-            )
-            if calendar_to_update is None:
-                return JSONResponse(content={'detail': 'We failed to update the new calendar with the note'}, status_code=422)
-            else:
-                return
-            
-        except Exception as e:
-            logger.error(f"Calendar note could not be added to the requested calendar: {e}")
-            return JSONResponse(content={'detail': 'There was an error adding the note to it\'s new calendar'}, status_code=422)
+        return await CalendarData.update_note_service(
+            request, 
+            calendar_id, 
+            note_id, 
+            user_email,
+        )
         
 
 async def delete_note(request: Request, calendar_id: str, calendar_note_id: str):

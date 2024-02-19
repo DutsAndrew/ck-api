@@ -282,3 +282,35 @@ def test_add_calendar_note_to_calendar_route_fails_on_extra_data_sent(test_clien
         assert error['type'] == 'extra_forbidden'
         assert error['loc'] == ['body', 'alligators']
         assert error['msg'] == 'Extra inputs are not permitted'
+
+
+# @pytest.mark.skip(reason='Not implemented')
+def test_update_calendar_note_to_calendar_route_succeeds(test_client_with_db, generate_test_token):
+    with mock.patch('controllers.calendar_controller.CalendarData.update_note_service', new_callable=AsyncMock) as mock_add_user_to_calendar_service:
+    
+        mock_add_user_to_calendar_service.return_value = {
+            'detail': 'Successfully updated the note',
+            'updated_note': {'_id': '111'},
+        }
+
+        response = test_client_with_db.put(
+            'calendar/123/updateNote/111',
+            headers={
+                'Accept': 'application/json',
+                'Authorization': f'Bearer {generate_test_token}',
+                'Content-type': 'application/json',
+            },
+            json={
+                'createdBy': 'John Wick',
+                'note': 'This is a note',
+                'noteType': 'mischievous',
+                'dates': {
+                    'start_date': '2022-01-01 00:00:00',
+                    'end_date': '2022-01-01 23:59:59',
+                }
+            }
+        )
+
+        assert response.status_code == 200
+        assert response.json()['detail'] == 'Successfully updated the note'
+        assert 'updated_note' in response.json()

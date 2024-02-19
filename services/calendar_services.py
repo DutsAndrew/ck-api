@@ -381,3 +381,71 @@ class CalendarData():
       
         except Exception as e:
             return CalendarDataHelper.handle_server_error(e)
+        
+
+    @staticmethod
+    async def update_note_service(
+        request: Request, 
+        calendar_id: str, 
+        note_id: str, 
+        user_email: str
+    ):
+        try:
+            permissions = await CalendarDataHelper.verify_user_has_calendar_authorization(
+                request, 
+                user_email, 
+                calendar_id
+            )
+
+            if permissions is False or isinstance(permissions, JSONResponse):
+                return JSONResponse(content={
+                    'detail': 'We could not validate permissions'}, status_code=404
+            )
+
+            note = await CalendarDataHelper.find_one_calendar_note(
+                request, 
+                note_id,
+            )
+
+            if note is None:
+                return JSONResponse(content={
+                    'detail': 'That note could not be found'}, status_code=404
+                )
+            
+            updated_note = await CalendarDataHelper.create_updated_note(
+                request, 
+                note, 
+                calendar_id, 
+            )
+
+            if isinstance(updated_note, JSONResponse):
+                return updated_note
+            
+            # move note to new calendar if necessary
+            if note['calendar_id'] is not calendar_id:
+                change_status = await CalendarDataHelper.handle_move_calendar_note_to_new_calendar(
+                    request,
+                    updated_note,
+                    calendar_id,
+                    note_id,                                                                   
+                )
+
+                if isinstance(change_status, JSONResponse):
+                    return change_status
+                
+            uploaded_note = await CalendarDataHelper.update_calendar_note(
+                request,
+                updated_note,
+                note_id
+            )
+
+            if isinstance(uploaded_note, JSONResponse):
+                return uploaded_note
+            
+            return JSONResponse(content={
+                'detail': 'Successfully updated the note',
+                'updated_note': jsonable_encoder(updated_note),
+            }, status_code=200)
+
+        except Exception as e:
+            return CalendarDataHelper.handle_server_error(e)

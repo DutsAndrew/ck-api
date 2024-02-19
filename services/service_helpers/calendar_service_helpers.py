@@ -536,6 +536,46 @@ class CalendarDataHelper:
 
         except Exception as e:
             return CalendarDataHelper.handle_server_error(e)
+        
+
+    @staticmethod
+    async def find_one_calendar_note(
+        request: Request,
+        note_id: str,
+    ):
+        try:
+            note = await request.app.db['calendar_notes'].find_one(
+                {'_id': note_id}
+            )
+
+            if note is None:
+                return JSONResponse(content={
+                    'detail': 'Note not found'}, status_code=404
+                )
+
+        except Exception as e:
+            return CalendarDataHelper.handle_server_error(e)
+        
+
+    @staticmethod
+    async def update_calendar_note(
+        request: Request,
+        note_id: str,
+        note: CalendarNote,
+    ):
+        try:
+            uploaded_note = await request.app.db['calendar_notes'].update_one(
+                {'_id': note_id},
+                {'$set': jsonable_encoder(note)}
+            )
+
+            if uploaded_note is None:
+                return JSONResponse(content={
+                    'detail': 'Failed to update note'}, status_code=422
+                )
+
+        except Exception as e:
+            return CalendarDataHelper.handle_server_error(e)
 
 
     @staticmethod
@@ -784,6 +824,96 @@ class CalendarDataHelper:
             )
 
         return removal_status
+    
+
+    @staticmethod
+    async def create_updated_note(
+        request: Request, 
+        note: CalendarNote, 
+        calendar_id: str
+    ):
+        try:
+            calendar_note_object = await json_parser(request=request)
+
+            if isinstance(calendar_note_object, JSONResponse):
+                return calendar_note_object
+
+            user_ref = UserRef(
+                first_name=note['created_by']['first_name'],
+                last_name=note['created_by']['last_name'],
+                user_id=note['created_by']['user_id'],
+            )
+
+            calendar_note = CalendarNote(
+                calendar_id=calendar_id,
+                note=calendar_note_object['note'],
+                type=calendar_note_object['noteType'],
+                user_ref=user_ref,
+                start_date=datetime.fromisoformat(calendar_note_object['dates']['startDate']),
+                end_date=datetime.fromisoformat(calendar_note_object['dates']['endDate']),
+                id=note['_id'],
+            )
+
+            if calendar_note is None:
+                return JSONResponse(content={'detail': 'The note you posted is not compatible'}, status_code=404)
+            
+            return calendar_note
+        
+        except Exception as e:
+            return CalendarDataHelper.handle_server_error(e)
+        
+
+    @staticmethod
+    async def remove_note_from_previous_calendar(
+        request: Request,
+        note: CalendarNote,
+    ):
+        try:
+            remove_note_from_calendar = await request.app.db['calendars'].update_one(
+                {'_id': note['calendar_id']},
+                {'$pull': {'calendar_notes': note['_id']}}
+            )
+
+            if remove_note_from_calendar is None:
+                return JSONResponse(content={
+                    'detail': 'We failed to remove the note from that calendar'}, status_code=422
+                )
+            
+            else:
+                return
+            
+        except Exception as e:
+            return CalendarDataHelper.handle_server_error(e)
+        
+
+    @staticmethod
+    async def handle_move_calendar_note_to_new_calendar(
+        request: Request,
+        note: CalendarNote,
+        calendar_id: str,
+        note_id: str,
+    ):
+        try:
+            removal_status = await CalendarDataHelper.remove_note_from_previous_calendar(
+                request,
+                note,
+                calendar_id,
+            )
+
+            if isinstance(removal_status, JSONResponse):
+                return removal_status
+            
+            add_status = await CalendarDataHelper.add_note_to_calendar(
+                request,
+                calendar_id,
+                note_id,
+            )
+
+            if isinstance(add_status, JSONResponse):
+                return add_status
+            
+        except Exception as e:
+            return CalendarDataHelper.handle_server_error(e)
 
         
 class UserProjection:
