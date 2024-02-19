@@ -114,6 +114,7 @@ async def post_calendar_note(
 @calendar_router.put('/{calendar_id}/updateNote/{note_id}')
 async def update_calendar_note(
         request: Request,
+        calendar_note: CalendarNoteData,
         calendar_id: str,
         note_id: str,
         token: str | bool = Depends(process_bearer_token)
