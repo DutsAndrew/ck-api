@@ -1519,3 +1519,206 @@ def test_delete_note_service_succeeds(
 
     assert response.status_code == 200
     assert json_response['detail'] == "Success! Calendar was updated, note was removed"
+
+
+# @pytest.mark.skip(reason='Not implemented')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.populate_one_calendar', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.remove_note_from_calendar', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.delete_note', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_calendar_note', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_calendar', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.verify_user_has_calendar_authorization', new_callable=AsyncMock)
+def test_delete_note_service_fails_on_no_populated_calendar(
+        mock_verify_user_has_calendar_authorization,
+        mock_find_one_calendar,
+        mock_find_one_calendar_note,
+        mock_delete_note,
+        mock_remove_note_from_calendar,
+        mock_populate_one_calendar,
+        test_client_with_db,
+        generate_test_token,
+    ):
+
+    mock_verify_user_has_calendar_authorization.return_value = True
+    mock_find_one_calendar.return_value = {'_id': '456'}
+    mock_find_one_calendar_note.return_value = {'_id': '111', 'calendar_id': '456'}
+    mock_delete_note.return_value = {'_id': '111'}
+    mock_remove_note_from_calendar.return_value = {'_id': '456'}
+    mock_populate_one_calendar.return_value = None
+
+    response = test_client_with_db.delete(
+        f'calendar/456/deleteNote/111',
+        headers={
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {generate_test_token}',
+            'Content-type': 'application/json',
+        },
+    )
+
+    json_response = response.json()
+
+    assert response.status_code == 422
+    assert json_response['detail'] == "we failed to populate an updated calendar without the note, but the note was removed"
+
+
+# @pytest.mark.skip(reason='Not implemented')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.remove_note_from_calendar', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.delete_note', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_calendar_note', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_calendar', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.verify_user_has_calendar_authorization', new_callable=AsyncMock)
+def test_delete_note_service_fails_on_note_not_removed_from_calendar(
+        mock_verify_user_has_calendar_authorization,
+        mock_find_one_calendar,
+        mock_find_one_calendar_note,
+        mock_delete_note,
+        mock_remove_note_from_calendar,
+        test_client_with_db,
+        generate_test_token,
+    ):
+
+    mock_verify_user_has_calendar_authorization.return_value = True
+    mock_find_one_calendar.return_value = {'_id': '456'}
+    mock_find_one_calendar_note.return_value = {'_id': '111', 'calendar_id': '456'}
+    mock_delete_note.return_value = {'_id': '111'}
+    mock_remove_note_from_calendar.return_value = JSONResponse({
+        'detail': 'Failed to remove note from calendar'
+    }, status_code=422)
+
+    response = test_client_with_db.delete(
+        f'calendar/456/deleteNote/111',
+        headers={
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {generate_test_token}',
+            'Content-type': 'application/json',
+        },
+    )
+
+    json_response = response.json()
+
+    assert response.status_code == 422
+    assert json_response['detail'] == "Failed to remove note from calendar"
+
+
+# @pytest.mark.skip(reason='Not implemented')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.delete_note', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_calendar_note', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_calendar', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.verify_user_has_calendar_authorization', new_callable=AsyncMock)
+def test_delete_note_service_fails_on_note_not_deleted(
+        mock_verify_user_has_calendar_authorization,
+        mock_find_one_calendar,
+        mock_find_one_calendar_note,
+        mock_delete_note,
+        test_client_with_db,
+        generate_test_token,
+    ):
+
+    mock_verify_user_has_calendar_authorization.return_value = True
+    mock_find_one_calendar.return_value = {'_id': '456'}
+    mock_find_one_calendar_note.return_value = {'_id': '111', 'calendar_id': '456'}
+    mock_delete_note.return_value = JSONResponse({
+        'detail': 'Failed to delete note'
+    }, status_code=422)
+
+    response = test_client_with_db.delete(
+        f'calendar/456/deleteNote/111',
+        headers={
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {generate_test_token}',
+            'Content-type': 'application/json',
+        },
+    )
+
+    json_response = response.json()
+
+    assert response.status_code == 422
+    assert json_response['detail'] == "Failed to delete note"
+
+
+# @pytest.mark.skip(reason='Not implemented')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_calendar_note', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_calendar', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.verify_user_has_calendar_authorization', new_callable=AsyncMock)
+def test_delete_note_service_fails_on_no_note_found(
+        mock_verify_user_has_calendar_authorization,
+        mock_find_one_calendar,
+        mock_find_one_calendar_note,
+        test_client_with_db,
+        generate_test_token,
+    ):
+
+    mock_verify_user_has_calendar_authorization.return_value = True
+    mock_find_one_calendar.return_value = {'_id': '456'}
+    mock_find_one_calendar_note.return_value = None
+
+    response = test_client_with_db.delete(
+        f'calendar/456/deleteNote/111',
+        headers={
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {generate_test_token}',
+            'Content-type': 'application/json',
+        },
+    )
+
+    json_response = response.json()
+
+    assert response.status_code == 404
+    assert json_response['detail'] == "Invalid data requested"
+
+
+# @pytest.mark.skip(reason='Not implemented')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_calendar', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.verify_user_has_calendar_authorization', new_callable=AsyncMock)
+def test_delete_note_service_fails_on_no_calendar_found(
+        mock_verify_user_has_calendar_authorization,
+        mock_find_one_calendar,
+        mock_find_one_calendar_note,
+        test_client_with_db,
+        generate_test_token,
+    ):
+
+    mock_verify_user_has_calendar_authorization.return_value = True
+    mock_find_one_calendar.return_value = None
+    mock_find_one_calendar_note.return_value = {'_id': '111'}
+
+    response = test_client_with_db.delete(
+        f'calendar/456/deleteNote/111',
+        headers={
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {generate_test_token}',
+            'Content-type': 'application/json',
+        },
+    )
+
+    json_response = response.json()
+
+    assert response.status_code == 404
+    assert json_response['detail'] == "Invalid data requested"
+
+
+# @pytest.mark.skip(reason='Not implemented')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.verify_user_has_calendar_authorization', new_callable=AsyncMock)
+def test_delete_note_service_fails_on_no_permissions(
+        mock_verify_user_has_calendar_authorization,
+        mock_find_one_calendar,
+        mock_find_one_calendar_note,
+        test_client_with_db,
+        generate_test_token,
+    ):
+
+    mock_verify_user_has_calendar_authorization.return_value = False
+
+    response = test_client_with_db.delete(
+        f'calendar/456/deleteNote/111',
+        headers={
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {generate_test_token}',
+            'Content-type': 'application/json',
+        },
+    )
+
+    json_response = response.json()
+
+    assert response.status_code == 404
+    assert json_response['detail'] == "We could not validate permissions"
