@@ -79,8 +79,8 @@ def test_remove_user_from_calendar_service_fails_on_no_user_has_no_permissions(
     user_id = 'test_user_id'
 
     mock_validate_user_and_calendar.return_value = (
-        {'_id': 'test_user_id'}, 
-        {'_id': '123', 'created_by': '456'}
+        {'_id': '123'}, 
+        {'_id': '456', 'created_by': '999', 'authorized_users': ['123']}
     )
     mock_has_calendar_permissions.return_value = False
 
@@ -114,8 +114,11 @@ def test_remove_user_from_calendar_service_failed_to_filter_user(
     user_type = 'test_user_type'
     user_id = 'test_user_id'
 
-    mock_validate_user_and_calendar.return_value = (None, None)
-    mock_has_calendar_permissions.return_value = False
+    mock_validate_user_and_calendar.return_value = (
+        {'_id': '123'}, 
+        {'_id': '456', 'created_by': '999', 'authorized_users': ['123']}
+    )
+    mock_has_calendar_permissions.return_value = True
     mock_filter_out_user_from_calendar_list.return_value = None
 
     response = test_client_with_db.delete(
@@ -150,7 +153,10 @@ def test_remove_user_from_calendar_service_failed_to_filter_user(
     user_type = 'test_user_type'
     user_id = 'test_user_id'
 
-    mock_validate_user_and_calendar.return_value = ({'_id': '123'}, {'_id': '123', 'created_by': '456'})
+    mock_validate_user_and_calendar.return_value = (
+        {'_id': '123'}, 
+        {'_id': '456', 'created_by': '999', 'authorized_users': ['123']}
+    )
     mock_has_calendar_permissions.return_value = True
     mock_filter_out_user_from_calendar_list.return_value = ({'_id': 'test'})
     mock_replace_one_calendar.return_value = None
@@ -191,7 +197,7 @@ def test_remove_user_from_calendar_fails_on_failure_to_repopulate_calendar(
 
     mock_validate_user_and_calendar.return_value = (
         {'_id': '123'}, 
-        {'_id': '123', 'created_by': '456'}
+        {'_id': '456', 'created_by': '999', 'authorized_users': ['123']}
     )
     mock_has_calendar_permissions.return_value = True
     mock_filter_out_user_from_calendar_list.return_value = ({'_id': '123'})
@@ -234,7 +240,7 @@ def test_remove_user_from_calendar_succeeds(
 
     mock_validate_user_and_calendar.return_value = (
         {'_id': '123'}, 
-        {'_id': '123', 'created_by': '456'}
+        {'_id': '456', 'created_by': '999', 'authorized_users': ['123']}
     )
     mock_has_calendar_permissions.return_value = True
     mock_filter_out_user_from_calendar_list.return_value = ({'_id': '123'})
@@ -259,16 +265,19 @@ def test_remove_user_from_calendar_succeeds(
 
 # @pytest.mark.skip(reason='Not implemented')
 @patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.validate_user_and_calendar', new_callable=AsyncMock)
-def test_add_user_to_calendar_fails_on_no_user_to_add_found(
+def test_add_user_to_calendar_fails_on_no_permissions(
         mock_validate_user_and_calendar,
         test_client_with_db,
         generate_test_token,
     ):
-    calendar_id = 'test_calendar_id'
-    user_type = 'test_user_type'
-    user_id = 'authorized'
+    calendar_id = '456'
+    user_type = 'authorized'
+    user_id = '123'
 
-    mock_validate_user_and_calendar.return_value = None
+    mock_validate_user_and_calendar.return_value = (
+        None, 
+        {'_id': '456', 'created_by': '999', 'authorized_users': ['123']}
+    )
 
     response = test_client_with_db.post(
         f'calendar/{calendar_id}/addUser/{user_id}/{user_type}',
@@ -281,14 +290,14 @@ def test_add_user_to_calendar_fails_on_no_user_to_add_found(
 
     json_response = response.json()
 
-    assert response.status_code == 404
-    assert json_response['detail'] == "There was an issue processing the user and calendar sent"
+    assert response.status_code == 422
+    assert json_response['detail'] == "This request cannot be processed"
 
 
 # @pytest.mark.skip(reason='Not implemented')
 @patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.validate_user_and_calendar', new_callable=AsyncMock)
 @patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_user', new_callable=AsyncMock)
-def test_add_user_to_calendar_fails_on_no_user_to_add_found(
+def test_add_user_to_calendar_fails_on_no_calendar_found(
         mock_find_one_user,
         mock_validate_user_and_calendar,
         test_client_with_db,
@@ -300,7 +309,7 @@ def test_add_user_to_calendar_fails_on_no_user_to_add_found(
 
     mock_validate_user_and_calendar.return_value = (
         {'_id': '123'}, 
-        {'_id': '456', 'created_by': '123'}
+        {'_id': '456', 'created_by': '999', 'authorized_users': ['123']}
     )
     mock_find_one_user.return_value = None
 
@@ -336,7 +345,7 @@ def test_add_user_to_calendar_fails_on_no_calendar_permissions(
 
     mock_validate_user_and_calendar.return_value = (
         {'_id': '123'}, 
-        {'_id': '123', 'created_by': '456'}
+        {'_id': '456', 'created_by': '999', 'authorized_users': ['123']}
     )
     mock_find_one_user.return_value = {'_id': '123'}
     mock_has_calendar_permissions.return_value = False
@@ -375,7 +384,7 @@ def test_add_user_to_calendar_fails_on_user_not_added_to_calendar_list(
 
     mock_validate_user_and_calendar.return_value = (
         {'_id': '123'}, 
-        {'_id': '123', 'created_by': '456'}
+        {'_id': '456', 'created_by': '999', 'authorized_users': ['123']}
     )
     mock_find_one_user.return_value = {'_id': '123'}
     mock_has_calendar_permissions.return_value = True
@@ -417,7 +426,7 @@ def test_add_user_to_calendar_fails_on_no_calendar_return_on_update_find(
 
     mock_validate_user_and_calendar.return_value = (
         {'_id': '123'}, 
-        {'_id': '123', 'created_by': '456'}
+        {'_id': '456', 'created_by': '999', 'authorized_users': ['123']}
     )
     mock_find_one_user.return_value = {'_id': '123'}
     mock_has_calendar_permissions.return_value = True
@@ -462,7 +471,7 @@ def test_add_user_to_calendar_fails_on_user_in_calendar_check_fail(
 
     mock_validate_user_and_calendar.return_value = (
         {'_id': '123'}, 
-        {'_id': '123', 'created_by': '456'}
+        {'_id': '456', 'created_by': '999', 'authorized_users': ['123']}
     )
     mock_find_one_user.return_value = {'_id': '123'}
     mock_has_calendar_permissions.return_value = True
@@ -510,7 +519,7 @@ def test_add_user_to_calendar_fails_on_unpopulated_calendar_return(
 
     mock_validate_user_and_calendar.return_value = (
         {'_id': '123'}, 
-        {'_id': '123', 'created_by': '456'}
+        {'_id': '456', 'created_by': '999', 'authorized_users': ['123']}
     )
     mock_find_one_user.return_value = {'_id': '123'}
     mock_has_calendar_permissions.return_value = True
@@ -559,7 +568,7 @@ def test_add_user_to_calendar_succeeds(
 
     mock_validate_user_and_calendar.return_value = (
         {'_id': '123'}, 
-        {'_id': '123', 'created_by': '456'}
+        {'_id': '456', 'created_by': '999', 'authorized_users': ['123']}
     )
     mock_find_one_user.return_value = {'_id': '123'}
     mock_has_calendar_permissions.return_value = True
