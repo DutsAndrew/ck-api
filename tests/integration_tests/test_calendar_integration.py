@@ -111,9 +111,6 @@ async def test_delete_calendar_succeeds(test_client_with_db, generate_test_token
         {'name': 'test_for_developers_only_ck_api'}
     )
 
-    if calendar is None:
-        return None
-
     calendar_id = calendar['_id']
     user_id = '65c637416c0f0cc3d35698c2'
 
@@ -140,9 +137,6 @@ async def test_create_calendar_note_succeeds(test_client_with_db, generate_test_
     calendar = await test_client_with_db.db['calendars'].find_one(
         {'name': 'test_for_developers_only_ck_api'}
     )
-
-    if calendar is None:
-        return None
 
     calendar_id = calendar['_id']
 
@@ -182,9 +176,6 @@ async def test_update_calendar_note_succeeds(test_client_with_db, generate_test_
         {'name': 'ck_api_test_note'}
     )
 
-    if calendar is None or note is None:
-        return None
-
     calendar_id = calendar['_id']
     note_id = note['_id']
 
@@ -223,9 +214,6 @@ async def test_delete_calendar_note_succeeds(test_client_with_db, generate_test_
     note = await test_client_with_db.db['calendar_notes'].find_one(
         {'name': 'ck_api_test_note'}
     )
-
-    if calendar is None or note is None:
-        return None
 
     calendar_id = calendar['_id']
     note_id = note['_id']
