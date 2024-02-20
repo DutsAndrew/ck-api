@@ -212,3 +212,36 @@ async def test_update_calendar_note_succeeds(test_client_with_db, generate_test_
 
     assert 'detail' in json_response and json_response['detail'] == 'Successfully updated the note'
     assert 'updated_note' in json_response
+
+
+# @pytest.mark.skip(reason='Not implemented')
+@pytest.mark.order(after='test_create_calendar_note_succeeds')
+async def test_delete_calendar_note_succeeds(test_client_with_db, generate_test_token):
+    calendar = await test_client_with_db.db['calendars'].find_one(
+        {'name': 'test_for_developers_only_ck_api'}
+    )
+    note = await test_client_with_db.db['calendar_notes'].find_one(
+        {'name': 'ck_api_test_note'}
+    )
+
+    if calendar is None or note is None:
+        return None
+
+    calendar_id = calendar['_id']
+    note_id = note['_id']
+
+    response = test_client_with_db.delete(
+        f'/calendar/{calendar_id}/deleteNote/{note_id}',
+        headers={
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {generate_test_token}',
+            'Content-type': 'application/json',
+        },
+    )
+
+    assert response.status_code == 200
+
+    json_response = response.json()
+
+    assert 'detail' in json_response and json_response['detail'] == 'Success! Calendar was updated, note was removed'
+    assert 'updated_calendar' in json_response
