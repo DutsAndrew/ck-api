@@ -521,3 +521,56 @@ class CalendarData():
         
         except Exception as e:
             return CalendarDataHelper.handle_server_error(e)
+        
+
+    @staticmethod
+    async def post_event_service(
+        request: Request, 
+        calendar_id: str, 
+        user_email: str,
+    ):
+        user_ref = await CalendarDataHelper.build_user_reference(
+            request, 
+            user_email
+        )
+
+        if isinstance(user_ref, JSONResponse):
+            return user_ref
+        
+        request_body = await json_parser(request=request)
+
+        if isinstance(request_body, JSONResponse):
+            return request_body
+        
+        new_event = await CalendarDataHelper.create_event_instance(
+            request_body,
+            calendar_id,
+            user_ref,
+        )
+
+        if isinstance(new_event, JSONResponse):
+            return new_event
+        
+        event_upload = await CalendarDataHelper.upload_new_event(
+            request,
+            calendar_id,
+            new_event,
+        )
+
+        if isinstance(event_upload, JSONResponse):
+            return event_upload
+        
+        populated_calendar = await CalendarDataHelper.populate_one_calendar(
+            request,
+            calendar_id,
+        )
+
+        if populated_calendar is None:
+            return JSONResponse(content={
+                'detail': 'Failed to populated updated calendar'}, status_code=422
+            )
+        
+        return JSONResponse(content={
+            'detail': 'Success! We uploaded your event',
+            'updated_calendar': jsonable_encoder(populated_calendar),
+        }, status_code=200)

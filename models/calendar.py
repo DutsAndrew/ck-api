@@ -112,7 +112,7 @@ class ClientNewCalendarData(BaseModel):
           extra = Extra.forbid
 
 
-class CalendarNoteData(BaseModel):
+class ClientCalendarNoteData(BaseModel):
   createdBy: str
   note: str
   noteType: str
@@ -120,6 +120,22 @@ class CalendarNoteData(BaseModel):
 
   class Config:
     extra = Extra.forbid
+
+
+class ClientCalendarEventData(BaseModel):
+  combinedDateAndTime: str;
+  date: str;
+  eventName: str;
+  eventDescription: str;
+  repeat: bool;
+  repeatOption: str;
+  selectedCalendar: str;
+  selectedCalendarId: str;
+  selectedTime: str;
+
+  class Config: 
+    extra = Extra.forbid
+
     
 # CALENDAR TYPES CAN BE THE FOLLOWING:
     # PERSONAL - EACH USER HAS ONE

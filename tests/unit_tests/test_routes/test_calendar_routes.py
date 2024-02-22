@@ -314,3 +314,151 @@ def test_update_calendar_note_to_calendar_route_succeeds(test_client_with_db, ge
         assert response.status_code == 200
         assert response.json()['detail'] == 'Successfully updated the note'
         assert 'updated_note' in response.json()
+
+
+# @pytest.mark.skip(reason='Not implemented')
+def test_post_event_succeeds(test_client_with_db, generate_test_token):
+    with mock.patch('controllers.calendar_controller.CalendarData.post_event_service', new_callable=AsyncMock) as mock_add_user_to_calendar_service:
+    
+        mock_add_user_to_calendar_service.return_value = {
+            'detail': 'Success! We uploaded your event',
+            'updated_calendar': {'_id': '123'},
+        }
+
+        response = test_client_with_db.post(
+            'calendar/123/createEvent',
+            headers={
+                'Accept': 'application/json',
+                'Authorization': f'Bearer {generate_test_token}',
+                'Content-type': 'application/json',
+            },
+            json={
+                'combinedDateAndTime': '2022-01-01 00:00:00',
+                'date': '2022-01-01',
+                'eventName': 'Test Event',
+                'eventDescription': 'This is a test event',
+                'repeat': False,
+                'repeatOption': 'none',
+                'selectedCalendar': 'Personal Calendar',
+                'selectedCalendarId': '123',
+                'selectedTime': '00:00:00',
+            }
+        )
+
+        response_json = response.json()
+
+        assert response.status_code == 200
+        assert response_json['detail'] == 'Success! We uploaded your event'
+
+
+# @pytest.mark.skip(reason='Not implemented')
+def test_post_event_fails_on_missing_data(test_client_with_db, generate_test_token):
+    with mock.patch('controllers.calendar_controller.CalendarData.post_event_service', new_callable=AsyncMock) as mock_add_user_to_calendar_service:
+    
+        mock_add_user_to_calendar_service.return_value = {
+            'detail': 'Success! We uploaded your event',
+            'updated_calendar': {'_id': '123'},
+        }
+
+        response = test_client_with_db.post(
+            'calendar/123/createEvent',
+            headers={
+                'Accept': 'application/json',
+                'Authorization': f'Bearer {generate_test_token}',
+                'Content-type': 'application/json',
+            },
+            json={
+                'combinedDateAndTime': '2022-01-01 00:00:00',
+                'eventName': 'Test Event',
+                'eventDescription': 'This is a test event',
+                'repeat': False,
+                'repeatOption': 'none',
+                'selectedCalendar': 'Personal Calendar',
+                'selectedCalendarId': '123',
+                'selectedTime': '00:00:00',
+            }
+        )
+
+        response_json = response.json()
+
+        assert response.status_code == 422
+        assert response_json['detail'] == [
+            {
+                'type': 'missing',
+                'loc': ['body', 'date'],
+                'msg': 'Field required',
+                'input': {
+                    'combinedDateAndTime': '2022-01-01 00:00:00',
+                    'eventName': 'Test Event',
+                    'eventDescription': 'This is a test event',
+                    'repeat': False,
+                    'repeatOption': 'none',
+                    'selectedCalendar': 'Personal Calendar',
+                    'selectedCalendarId': '123',
+                    'selectedTime': '00:00:00'
+                },
+                'url': 'https://errors.pydantic.dev/2.1/v/missing'
+            }
+        ]
+
+
+# @pytest.mark.skip(reason='Not implemented')
+def test_post_event_fails_on_extra_data_present(test_client_with_db, generate_test_token):
+    with mock.patch('controllers.calendar_controller.CalendarData.post_event_service', new_callable=AsyncMock) as mock_add_user_to_calendar_service:
+    
+        mock_add_user_to_calendar_service.return_value = {
+            'detail': 'Success! We uploaded your event',
+            'updated_calendar': {'_id': '123'},
+        }
+
+        response = test_client_with_db.post(
+            'calendar/123/createEvent',
+            headers={
+                'Accept': 'application/json',
+                'Authorization': f'Bearer {generate_test_token}',
+                'Content-type': 'application/json',
+            },
+            json={
+                'a-fun-extra': 'bug bug bug',
+                'combinedDateAndTime': '2022-01-01 00:00:00',
+                'eventName': 'Test Event',
+                'eventDescription': 'This is a test event',
+                'repeat': False,
+                'repeatOption': 'none',
+                'selectedCalendar': 'Personal Calendar',
+                'selectedCalendarId': '123',
+                'selectedTime': '00:00:00',
+            }
+        )
+
+        response_json = response.json()
+
+        print(response_json)
+
+        assert response.status_code == 422
+        assert response_json['detail'] == [
+            {
+                'type': 'missing',
+                'loc': ['body', 'date'],
+                'msg': 'Field required',
+                'input': {
+                    'a-fun-extra': 'bug bug bug',
+                    'combinedDateAndTime': '2022-01-01 00:00:00',
+                    'eventName': 'Test Event',
+                    'eventDescription': 'This is a test event',
+                    'repeat': False,
+                    'repeatOption': 'none',
+                    'selectedCalendar': 'Personal Calendar',
+                    'selectedCalendarId': '123',
+                    'selectedTime': '00:00:00'
+                },
+                'url': 'https://errors.pydantic.dev/2.1/v/missing'
+            },
+            {
+                'type': 'extra_forbidden',
+                'loc': ['body', 'a-fun-extra'],
+                'msg': 'Extra inputs are not permitted',
+                'input': 'bug bug bug',
+                'url': 'https://errors.pydantic.dev/2.1/v/extra_forbidden'
+            }
+        ]

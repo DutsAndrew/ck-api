@@ -1668,6 +1668,7 @@ def test_delete_note_service_fails_on_no_note_found(
 
 
 # @pytest.mark.skip(reason='Not implemented')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_calendar_note', new_callable=AsyncMock)
 @patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.find_one_calendar', new_callable=AsyncMock)
 @patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.verify_user_has_calendar_authorization', new_callable=AsyncMock)
 def test_delete_note_service_fails_on_no_calendar_found(
@@ -1701,8 +1702,6 @@ def test_delete_note_service_fails_on_no_calendar_found(
 @patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.verify_user_has_calendar_authorization', new_callable=AsyncMock)
 def test_delete_note_service_fails_on_no_permissions(
         mock_verify_user_has_calendar_authorization,
-        mock_find_one_calendar,
-        mock_find_one_calendar_note,
         test_client_with_db,
         generate_test_token,
     ):

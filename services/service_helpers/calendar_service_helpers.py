@@ -616,6 +616,38 @@ class CalendarDataHelper:
 
         except Exception as e:
             return CalendarDataHelper.handle_server_error(e)
+        
+
+    @staticmethod
+    async def upload_new_event(
+        request: Request, 
+        calendar_id: str, 
+        new_event: Event,
+    ):
+        try:
+            upload_event = await request.app.db['events'].insert_one(
+                jsonable_encoder(new_event)
+            )
+
+            if upload_event is None:
+                return JSONResponse(content={
+                    'detail': 'failed to upload event'}, status_code=422
+                )
+
+            update_calendar = await request.app.db['calendars'].update_one(
+                {'_id': calendar_id},
+                {'$push': {'events': str(new_event.id)}}
+            )
+
+            if update_calendar is None:
+                return JSONResponse(content={
+                    'detail': 'failed to update calendar with new event'}, status_code=422
+                )
+            
+            return
+        
+        except Exception as e:
+            return CalendarDataHelper.handle_server_error(e)
 
 
     @staticmethod
@@ -952,6 +984,67 @@ class CalendarDataHelper:
             if isinstance(add_status, JSONResponse):
                 return add_status
             
+        except Exception as e:
+            return CalendarDataHelper.handle_server_error(e)
+        
+
+    @staticmethod
+    async def build_user_reference(request: Request, user_email: str):
+        user_ref = await request.app.db['users'].find_one(
+            {'email': user_email},
+            projection={
+                "first_name": 1,
+                "last_name": 1,
+            }
+        )
+
+        if user_ref is None:
+            return JSONResponse(content={
+                'detail': 'the user making the request is not valid'}, status_code=422
+            )
+        
+        return user_ref
+    
+
+    @staticmethod
+    def create_event_instance(
+        request_body: dict, 
+        calendar_id: str, 
+        user_ref: UserRef
+    ):
+        try:
+            compiled_user_ref = UserRef(
+                first_name=user_ref['first_name'],
+                last_name=user_ref['last_name'],
+                user_id=user_ref['_id'],
+            )
+
+            if compiled_user_ref is None:
+                return JSONResponse(content={
+                    'detail': 'we could not create your calendar event'}, status_code=422
+                )
+
+            new_calendar = Event(
+                calendar_id=calendar_id,
+                combined_date_and_time=datetime.fromisoformat(request_body['combinedDateAndTime'].replace('Z', '+00:00')) 
+                    if request_body['combinedDateAndTime'] 
+                    else None,
+                created_by=compiled_user_ref,
+                event_date=datetime.strptime(request_body['date'], '%Y-%m-%d') if request_body['date'] else None,
+                event_description=request_body['eventDescription'] if request_body['eventDescription'] else '',
+                event_name=request_body['eventName'] if request_body['eventName'] else '',
+                event_time=request_body['selectedTime'] if len(request_body['selectedTime']) > 0 else '',
+                repeat_option=request_body['repeatOption'] if request_body['repeatOption'] else '',
+                repeats=request_body['repeat'] if request_body['repeat'] else False,
+            )
+
+            if new_calendar is None:
+                return JSONResponse(content={
+                    'detail': 'we could not create your calendar event'}, status_code=422
+                )
+
+            return new_calendar
+        
         except Exception as e:
             return CalendarDataHelper.handle_server_error(e)
 

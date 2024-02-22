@@ -159,97 +159,16 @@ async def delete_note(
         )
 
 
-async def post_event(request: Request, calendar_id: str, user_making_request_email):
-    user_ref = await build_user_reference(request, user_making_request_email)
-
-    if isinstance(user_ref, JSONResponse):
-        return user_ref
-    
-    request_body = await json_parser(request=request)
-
-    if isinstance(request_body, JSONResponse):
-        return request_body
-    
-    new_event = create_event_instance(request_body, calendar_id, user_ref)
-
-    uploaded_event = await upload_new_event(request, calendar_id, new_event)
-
-    if isinstance(uploaded_event, JSONResponse):
-        return uploaded_event
-    
-    updated_calendar = await CalendarDataHelper.populate_one_calendar(request, calendar_id)
-
-    if updated_calendar is None:
-        return JSONResponse(content={'detail': 'failed to retrieve populated calendar'}, status_code=422)
-    
-    return JSONResponse(content={
-        'detail': 'Success! We uploaded your event',
-        'updated_calendar': updated_calendar,
-    }, status_code=200)
-
-
-async def build_user_reference(request: Request, user_making_request_email: str):
-    user_ref = await request.app.db['users'].find_one(
-        {'email': user_making_request_email},
-        projection={
-            "first_name": 1,
-            "last_name": 1,
-        }
-    )
-
-    if user_ref is None:
-        return JSONResponse(content={'detail': 'the user making the request is not valid'}, status_code=422)
-    
-    return user_ref
-
-
-def create_event_instance(request_body: dict, calendar_id: str, user_ref: UserRef):
-    compiled_user_ref = UserRef(
-        first_name=user_ref['first_name'],
-        last_name=user_ref['last_name'],
-        user_id=user_ref['_id'],
-    )
-
-    new_calendar = Event(
-        calendar_id=calendar_id,
-        combined_date_and_time=datetime.fromisoformat(request_body['combinedDateAndTime'].replace('Z', '+00:00')) 
-            if request_body['combinedDateAndTime'] 
-            else None,
-        created_by=compiled_user_ref,
-        event_date=datetime.strptime(request_body['date'], '%Y-%m-%d') if request_body['date'] else None,
-        event_description=request_body['eventDescription'] if request_body['eventDescription'] else '',
-        event_name=request_body['eventName'] if request_body['eventName'] else '',
-        event_time=request_body['selectedTime'] if len(request_body['selectedTime']) > 0 else '',
-        repeat_option=request_body['repeatOption'] if request_body['repeatOption'] else '',
-        repeats=request_body['repeat'] if request_body['repeat'] else False,
-    )
-
-    if new_calendar is None:
-        return JSONResponse(content={'detail': 'we could not create your calendar event'}, status_code=422)
-
-    return new_calendar
-
-
-async def upload_new_event(request, calendar_id, new_event):
-    upload_event = await request.app.db['events'].insert_one(jsonable_encoder(new_event))
-
-    if upload_event is None:
-        return JSONResponse(content={'detail': 'failed to upload event'}, status_code=422)
-
-    update_calendar = await request.app.db['calendars'].update_one(
-        {'_id': calendar_id},
-        {'$push': {'events': str(new_event.id)}}
-    )
-
-    if update_calendar is None:
-        return JSONResponse(content={'detail': 'failed to update calendar with new event'}, status_code=422)
-    
-    posted_event = await request.app.db['events'].find_one({'_id': str(new_event.id)})
-
-    if posted_event is None:
-        return JSONResponse(content={'detail': 'we could not retrieve the posted event'}, status_code=422)
-    
-    return posted_event
+async def post_event(
+          request: Request, 
+          calendar_id: str, 
+          user_email: str
+    ):
+        return await CalendarData.post_event_service(
+            request, 
+            calendar_id, 
+            user_email,
+        )
 
 
 async def put_event(
