@@ -1971,7 +1971,6 @@ async def test_post_event_service_fails_on_bad_json_parse(mock_build_user_refere
         assert (await response.json())['detail'] == "invalid JSON"
 
 
-
 # @pytest.mark.skip(reason='Not implemented')
 @patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.build_user_reference', new_callable=AsyncMock)
 def test_post_event_service_fails_on_no_user_ref_built(mock_build_user_reference, test_client_with_db, generate_test_token):
