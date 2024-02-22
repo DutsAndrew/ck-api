@@ -990,20 +990,24 @@ class CalendarDataHelper:
 
     @staticmethod
     async def build_user_reference(request: Request, user_email: str):
-        user_ref = await request.app.db['users'].find_one(
-            {'email': user_email},
-            projection={
-                "first_name": 1,
-                "last_name": 1,
-            }
-        )
-
-        if user_ref is None:
-            return JSONResponse(content={
-                'detail': 'the user making the request is not valid'}, status_code=422
+        try:
+            user_ref = await request.app.db['users'].find_one(
+                {'email': user_email},
+                projection={
+                    "first_name": 1,
+                    "last_name": 1,
+                }
             )
+
+            if user_ref is None:
+                return JSONResponse(content={
+                    'detail': 'the user making the request is not valid'}, status_code=422
+                )
+            
+            return user_ref
         
-        return user_ref
+        except Exception as e:
+            return CalendarDataHelper.handle_server_error(e)
     
 
     @staticmethod

@@ -233,3 +233,39 @@ async def test_delete_calendar_note_succeeds(test_client_with_db, generate_test_
 
     assert 'detail' in json_response and json_response['detail'] == 'Success! Calendar was updated, note was removed'
     assert 'updated_calendar' in json_response
+
+
+# @pytest.mark.skip(reason='Not implemented')
+@pytest.mark.order(before='test_delete_calendar_succeeds')
+async def test_post_calendar_event_succeeds(test_client_with_db, generate_test_token):
+    calendar = await test_client_with_db.db['calendars'].find_one(
+        {'name': 'test_for_developers_only_ck_api'}
+    )
+
+    calendar_id = calendar['_id']
+
+    response = test_client_with_db.post(
+        f'/calendar/{calendar_id}/createEvent',
+        headers={
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {generate_test_token}',
+            'Content-type': 'application/json',
+        },
+        json={
+            'combinedDateAndTime': '2022-01-01 00:00:00',
+            'date': '2022-01-01',
+            'eventName': 'ck_api_test_event',
+            'eventDescription': 'This is a test event',
+            'repeat': False,
+            'repeatOption': 'none',
+            'selectedCalendar': 'Personal Calendar',
+            'selectedCalendarId': '123',
+            'selectedTime': '00:00:00',
+        }
+    )
+
+    response_json = response.json()
+
+    assert response.status_code == 200
+    assert response_json['detail'] == 'Success! We uploaded your event'
+    assert 'updated_calendar' in response_json

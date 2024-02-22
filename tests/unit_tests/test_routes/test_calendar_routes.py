@@ -433,8 +433,6 @@ def test_post_event_fails_on_extra_data_present(test_client_with_db, generate_te
 
         response_json = response.json()
 
-        print(response_json)
-
         assert response.status_code == 422
         assert response_json['detail'] == [
             {

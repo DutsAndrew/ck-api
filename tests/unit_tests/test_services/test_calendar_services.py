@@ -1721,3 +1721,285 @@ def test_delete_note_service_fails_on_no_permissions(
 
     assert response.status_code == 404
     assert json_response['detail'] == "We could not validate permissions"
+
+
+# @pytest.mark.skip(reason='Not implemented')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.populate_one_calendar', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.upload_new_event', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.create_event_instance', new_callable=AsyncMock)
+@patch('scripts.json_parser', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.build_user_reference', new_callable=AsyncMock)
+def test_post_event_service_succeeds(
+        mock_build_user_reference,
+        mock_json_parser,
+        mock_create_event_instance,
+        mock_upload_new_event,
+        mock_populate_one_calendar,
+        test_client_with_db,
+        generate_test_token,
+    ):
+
+    mock_build_user_reference.return_value = {
+        'fist_name': 'Master',
+        'last_name': 'Chief',
+    }
+    mock_json_parser.return_value = {}
+    mock_create_event_instance.return_value = {
+        'event_name': 'Test Event',
+        'event_description': 'This is a description',
+        # ....
+    }
+    mock_upload_new_event.return_value = None
+    mock_populate_one_calendar.return_value = {'_id': '456'}
+
+    response = test_client_with_db.post(
+        f'calendar/456/createEvent',
+        headers={
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {generate_test_token}',
+            'Content-type': 'application/json',
+        },
+        json={
+            'combinedDateAndTime': '2022-01-01 00:00:00',
+            'date': '2022-01-01',
+            'eventName': 'Test Event',
+            'eventDescription': 'This is a test event',
+            'repeat': False,
+            'repeatOption': 'none',
+            'selectedCalendar': 'Personal Calendar',
+            'selectedCalendarId': '123',
+            'selectedTime': '00:00:00',
+        }
+    )
+
+    json_response = response.json()
+
+    assert response.status_code == 200
+    assert json_response['detail'] == "Success! We uploaded your event"
+    assert 'updated_calendar' in json_response
+
+
+# @pytest.mark.skip(reason='Not implemented')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.populate_one_calendar', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.upload_new_event', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.create_event_instance', new_callable=AsyncMock)
+@patch('scripts.json_parser', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.build_user_reference', new_callable=AsyncMock)
+def test_post_event_service_fails_on_no_populated_calendar(
+        mock_build_user_reference,
+        mock_json_parser,
+        mock_create_event_instance,
+        mock_upload_new_event,
+        mock_populate_one_calendar,
+        test_client_with_db,
+        generate_test_token,
+    ):
+
+    mock_build_user_reference.return_value = {
+        'fist_name': 'Master',
+        'last_name': 'Chief',
+    }
+    mock_json_parser.return_value = {}
+    mock_create_event_instance.return_value = {
+        'event_name': 'Test Event',
+        'event_description': 'This is a description',
+        # ....
+    }
+    mock_upload_new_event.return_value = None
+    mock_populate_one_calendar.return_value = None
+
+    response = test_client_with_db.post(
+        f'calendar/456/createEvent',
+        headers={
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {generate_test_token}',
+            'Content-type': 'application/json',
+        },
+        json={
+            'combinedDateAndTime': '2022-01-01 00:00:00',
+            'date': '2022-01-01',
+            'eventName': 'Test Event',
+            'eventDescription': 'This is a test event',
+            'repeat': False,
+            'repeatOption': 'none',
+            'selectedCalendar': 'Personal Calendar',
+            'selectedCalendarId': '123',
+            'selectedTime': '00:00:00',
+        }
+    )
+
+    json_response = response.json()
+
+    assert response.status_code == 422
+    assert json_response['detail'] == "Failed to populated updated calendar"
+
+
+# @pytest.mark.skip(reason='Not implemented')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.upload_new_event', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.create_event_instance', new_callable=AsyncMock)
+@patch('scripts.json_parser', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.build_user_reference', new_callable=AsyncMock)
+def test_post_event_service_fails_on_event_not_uploaded(
+        mock_build_user_reference,
+        mock_json_parser,
+        mock_create_event_instance,
+        mock_upload_new_event,
+        test_client_with_db,
+        generate_test_token,
+    ):
+
+    mock_build_user_reference.return_value = {
+        'fist_name': 'Master',
+        'last_name': 'Chief',
+    }
+    mock_json_parser.return_value = {}
+    mock_create_event_instance.return_value = {
+        'event_name': 'Test Event',
+        'event_description': 'This is a description',
+        # ....
+    }
+    mock_upload_new_event.return_value = JSONResponse({
+        'detail': 'failed to update calendar with new event'
+    }, status_code=422)
+
+    response = test_client_with_db.post(
+        f'calendar/456/createEvent',
+        headers={
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {generate_test_token}',
+            'Content-type': 'application/json',
+        },
+        json={
+            'combinedDateAndTime': '2022-01-01 00:00:00',
+            'date': '2022-01-01',
+            'eventName': 'Test Event',
+            'eventDescription': 'This is a test event',
+            'repeat': False,
+            'repeatOption': 'none',
+            'selectedCalendar': 'Personal Calendar',
+            'selectedCalendarId': '123',
+            'selectedTime': '00:00:00',
+        }
+    )
+
+    json_response = response.json()
+
+    assert response.status_code == 422
+    assert json_response['detail'] == "failed to update calendar with new event"
+
+
+# @pytest.mark.skip(reason='Not implemented')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.create_event_instance', new_callable=AsyncMock)
+@patch('scripts.json_parser', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.build_user_reference', new_callable=AsyncMock)
+def test_post_event_service_fails_on_unable_to_create_event_instance(
+        mock_build_user_reference,
+        mock_json_parser,
+        mock_create_event_instance,
+        test_client_with_db,
+        generate_test_token,
+    ):
+
+    mock_build_user_reference.return_value = {
+        'fist_name': 'Master',
+        'last_name': 'Chief',
+    }
+    mock_json_parser.return_value = {}
+    mock_create_event_instance.return_value = JSONResponse({
+        'detail': 'we could not create your calendar event'
+    }, status_code=422)
+
+    response = test_client_with_db.post(
+        f'calendar/456/createEvent',
+        headers={
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {generate_test_token}',
+            'Content-type': 'application/json',
+        },
+        json={
+            'combinedDateAndTime': '2022-01-01 00:00:00',
+            'date': '2022-01-01',
+            'eventName': 'Test Event',
+            'eventDescription': 'This is a test event',
+            'repeat': False,
+            'repeatOption': 'none',
+            'selectedCalendar': 'Personal Calendar',
+            'selectedCalendarId': '123',
+            'selectedTime': '00:00:00',
+        }
+    )
+
+    json_response = response.json()
+
+    assert response.status_code == 422
+    assert json_response['detail'] == "we could not create your calendar event"
+
+
+# @pytest.mark.skip(reason='Not implemented')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.build_user_reference', new_callable=AsyncMock)
+async def test_post_event_service_fails_on_bad_json_parse(mock_build_user_reference, test_client_with_db, generate_test_token):
+    mock_build_user_reference.return_value = {
+        'fist_name': 'Master',
+        'last_name': 'Chief',
+    }
+    
+    # Mocking the json_parser function to return a JSONResponse object directly
+    with patch('scripts.json_parser', new_callable=AsyncMock) as mock_json_parser:
+        mock_json_parser.return_value = JSONResponse({'detail': 'invalid JSON'}, status_code=422)
+        
+        response = await test_client_with_db.post(
+            f'calendar/456/createEvent',
+            headers={
+                'Accept': 'application/json',
+                'Authorization': f'Bearer {generate_test_token}',
+                'Content-type': 'application/json',
+            },
+            json={
+                'combinedDateAndTime': '2022-01-01 00:00:00',
+                'date': '2022-01-01',
+                'eventName': 'Test Event',
+                'eventDescription': 'This is a test event',
+                'repeat': False,
+                'repeatOption': 'none',
+                'selectedCalendar': 'Personal Calendar',
+                'selectedCalendarId': '123',
+                'selectedTime': '00:00:00',
+            }
+        )
+
+        assert response.status_code == 422
+        assert (await response.json())['detail'] == "invalid JSON"
+
+
+
+# @pytest.mark.skip(reason='Not implemented')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.build_user_reference', new_callable=AsyncMock)
+def test_post_event_service_fails_on_no_user_ref_built(mock_build_user_reference, test_client_with_db, generate_test_token):
+    mock_build_user_reference.return_value = JSONResponse({
+        'detail': 'the user making the request is not valid'
+    }, status_code=422)
+
+    response = test_client_with_db.post(
+        f'calendar/456/createEvent',
+        headers={
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {generate_test_token}',
+            'Content-type': 'application/json',
+        },
+        json={
+            'combinedDateAndTime': '2022-01-01 00:00:00',
+            'date': '2022-01-01',
+            'eventName': 'Test Event',
+            'eventDescription': 'This is a test event',
+            'repeat': False,
+            'repeatOption': 'none',
+            'selectedCalendar': 'Personal Calendar',
+            'selectedCalendarId': '123',
+            'selectedTime': '00:00:00',
+        }
+    )
+
+    json_response = response.json()
+
+    assert response.status_code == 422
+    assert json_response['detail'] == "the user making the request is not valid"
