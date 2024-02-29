@@ -159,6 +159,7 @@ async def post_event(
 @calendar_router.put('/{calendar_id}/editEvent/{event_id}')
 async def put_calendar_event(
         request: Request,
+        event_data: ClientCalendarEventData,
         calendar_id: str,
         event_id: str,
         token: str | bool = Depends(process_bearer_token)

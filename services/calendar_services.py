@@ -574,3 +574,54 @@ class CalendarData():
             'detail': 'Success! We uploaded your event',
             'updated_calendar': jsonable_encoder(populated_calendar),
         }, status_code=200)
+    
+
+    @staticmethod
+    async def put_event_service(
+        request: Request,
+        calendar_id: str, 
+        event_id: str, 
+    ):
+        event_creator = await CalendarDataHelper.get_event_creator(request, event_id)
+
+        if isinstance(event_creator, JSONResponse):
+            return event_creator
+        
+        request_body = await json_parser(request=request)
+
+        if isinstance(request_body, JSONResponse):
+            return request_body
+        
+        updated_event = await CalendarDataHelper.create_event_instance(
+            request_body,
+            calendar_id,
+            event_creator,
+            event_creator,
+        )
+
+        if isinstance(updated_event, JSONResponse):
+            return updated_event
+        
+        event_status = await CalendarDataHelper.replace_event(
+            request,
+            updated_event,
+            event_id,
+        )
+
+        if isinstance(event_status, JSONResponse):
+            return event_status
+        
+        updated_calendar = await CalendarDataHelper.populate_one_calendar(
+            request,
+            calendar_id,
+        )
+
+        if updated_calendar is None:
+            return JSONResponse(content={
+                'detail': 'Failed to populate updated calendar'}, status_code=422
+            )
+        
+        return JSONResponse(content={
+            'detail': 'Success! We updated your event',
+            'updated_calendar': updated_calendar,
+        }, status_code=200)

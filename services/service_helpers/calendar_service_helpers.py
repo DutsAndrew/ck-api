@@ -648,7 +648,41 @@ class CalendarDataHelper:
         
         except Exception as e:
             return CalendarDataHelper.handle_server_error(e)
+        
 
+    @staticmethod
+    async def get_event_creator(request: Request, event_id: str):
+        event = await request.app.db['events'].find_one({'_id': event_id})
+
+        if event is None:
+            return JSONResponse(content={'detail': 'event not found'}, status_code=404)
+        
+        event_creator = UserRef(
+            first_name=event['created_by']['first_name'],
+            last_name=event['created_by']['last_name'],
+            user_id=event['created_by']['user_id'],
+        )
+
+        return event_creator
+    
+
+    @staticmethod
+    async def replace_event(
+        request: Request, 
+        edited_event: Event, 
+        event_id: str,
+    ):
+        updated_event = await request.app.db['events'].replace_one(
+            {'_id': event_id},
+            jsonable_encoder(edited_event),
+        )
+
+        if updated_event is None:
+            return JSONResponse(content={
+                'detail': 'we could not update that event'}, status_code=422)
+        
+        return
+    
 
     @staticmethod
     async def add_user_to_calendar_users_list(
