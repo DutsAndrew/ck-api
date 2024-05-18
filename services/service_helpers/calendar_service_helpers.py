@@ -685,6 +685,28 @@ class CalendarDataHelper:
     
 
     @staticmethod
+    async def remove_event_from_calendar(
+        request: Request,
+        calendar_id: str,
+        event_id: str,
+    ):
+        return await request.app.db['calendars'].update_one(
+            {'_id': calendar_id},
+            {'$pull': {'events': event_id}}
+        )
+    
+
+    @staticmethod
+    async def delete_event(
+        request: Request,
+        event_id: str,
+    ):
+        return await request.app.db['events'].delete_one(
+            {'_id': event_id}
+        )
+    
+
+    @staticmethod
     async def add_user_to_calendar_users_list(
         request: Request, 
         user_id: str, 

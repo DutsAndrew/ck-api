@@ -625,3 +625,49 @@ class CalendarData():
             'detail': 'Success! We updated your event',
             'updated_calendar': updated_calendar,
         }, status_code=200)
+    
+
+    @staticmethod
+    async def delete_event_service(
+        request: Request,
+        calendar_id: str,
+        event_id: str,
+    ):
+        remove_event = await CalendarDataHelper.remove_event_from_calendar(
+            request, 
+            calendar_id, 
+            event_id
+        )
+
+        if remove_event is None:
+            return JSONResponse(content={
+                'detail': 'failed to remove event from calendar'}, 
+                status_code=422
+            )
+
+        event_removal = await CalendarDataHelper.delete_event(
+            request,
+            event_id,
+        )
+
+        if event_removal is None:
+            return JSONResponse(content={
+                'detail': 'failed to remove event'}, 
+                status_code=422
+            )
+
+        updated_calendar = await CalendarDataHelper.populate_one_calendar(
+            request, 
+            calendar_id
+        )
+
+        if updated_calendar is None:
+            return JSONResponse(content={
+                'detail': 'there was an issue populating the calendar with the removed event'}, 
+                status_code=422
+            )
+
+        return JSONResponse(content={
+            'detail': 'Success! We deleted your event',
+            'updated_calendar': updated_calendar,
+        }, status_code=200)

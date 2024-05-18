@@ -2002,3 +2002,59 @@ def test_post_event_service_fails_on_no_user_ref_built(mock_build_user_reference
 
     assert response.status_code == 422
     assert json_response['detail'] == "the user making the request is not valid"
+
+
+# @pytest.mark.skip(reason='Not implemented')
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.populate_one_calendar', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.replace_event', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.create_event_instance', new_callable=AsyncMock)
+@patch('scripts.json_parser', new_callable=AsyncMock)
+@patch('services.service_helpers.calendar_service_helpers.CalendarDataHelper.get_event_creator', new_callable=AsyncMock)
+def test_edit_event_service_succeeds(
+        mock_get_event_creator,
+        mock_json_parser,
+        mock_create_event_instance,
+        mock_replace_event,
+        mock_populate_one_calendar,
+        test_client_with_db,
+        generate_test_token,
+    ):
+
+    mock_get_event_creator.return_value = {
+        'fist_name': 'Master',
+        'last_name': 'Chief',
+    }
+    mock_json_parser.return_value = {}
+    mock_create_event_instance.return_value = {
+        'event_name': 'Test Event',
+        'event_description': 'This is a description',
+        # ....
+    }
+    mock_replace_event.return_value = None
+    mock_populate_one_calendar.return_value = {'_id': '456'}
+
+    response = test_client_with_db.put(
+        f'calendar/456/editEvent/123',
+        headers={
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {generate_test_token}',
+            'Content-type': 'application/json',
+        },
+        json={
+            'combinedDateAndTime': '2022-01-01 00:00:00',
+            'date': '2022-01-01',
+            'eventName': 'Test Event',
+            'eventDescription': 'This is a test event',
+            'repeat': False,
+            'repeatOption': 'none',
+            'selectedCalendar': 'Personal Calendar',
+            'selectedCalendarId': '123',
+            'selectedTime': '00:00:00',
+        }
+    )
+
+    json_response = response.json()
+
+    assert response.status_code == 200
+    assert json_response['detail'] == "Success! We uploaded your event"
+    assert 'updated_calendar' in json_response

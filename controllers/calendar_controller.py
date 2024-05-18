@@ -176,111 +176,19 @@ async def put_event(
         calendar_id: str, 
         event_id: str, 
     ):
-        user_ref_of_event = await build_event_creator_instance(request, event_id)
-
-        if isinstance(user_ref_of_event, JSONResponse):
-            return user_ref_of_event
-        
-        request_body = await json_parser(request=request)
-
-        if isinstance(request_body, JSONResponse):
-            return request_body
-        
-        edited_event = build_edited_event(request_body, calendar_id, user_ref_of_event, event_id)
-
-        if isinstance(edited_event, JSONResponse):
-            return edited_event
-                
-        upload_updated_event = await update_event_and_calendar(request, edited_event, event_id)
-
-        if isinstance(upload_updated_event, JSONResponse):
-            return upload_updated_event
-        
-        updated_calendar = await CalendarDataHelper.populate_one_calendar(request, calendar_id)
-
-        if updated_calendar is None:
-            return JSONResponse(content={'detail': 'there was an issue populating the calendar with the updated event'}, status_code=422)
-
-        return JSONResponse(content={
-            'detail': 'Success! We updated your event',
-            'updated_calendar': updated_calendar,
-        }, status_code=200)
-
-
-async def build_event_creator_instance(request: Request, event_id: str):
-    outdated_event = await request.app.db['events'].find_one({'_id': event_id})
-
-    if outdated_event is None:
-        return JSONResponse(content={'detail': 'event not found'}, status_code=404)
-
-    user_ref = outdated_event['created_by']
-    return user_ref
-
-
-def build_edited_event(request_body: dict, calendar_id: str, user_ref_of_event: dict, event_id: str):
-    compiled_user_ref = UserRef(
-        first_name=user_ref_of_event['first_name'],
-        last_name=user_ref_of_event['last_name'],
-        user_id=user_ref_of_event['user_id'],
-    )
-
-    new_calendar = Event(
-        calendar_id=calendar_id,
-        combined_date_and_time=datetime.fromisoformat(request_body['combinedDateAndTime'].replace('Z', '+00:00')) 
-            if request_body['combinedDateAndTime'] 
-            else None,
-        created_by=compiled_user_ref,
-        event_date=datetime.strptime(request_body['date'], '%Y-%m-%d') if request_body['date'] else None,
-        event_description=request_body['eventDescription'] if request_body['eventDescription'] else '',
-        event_name=request_body['eventName'] if request_body['eventName'] else '',
-        event_time=request_body['selectedTime'] if len(request_body['selectedTime']) > 0 else '',
-        repeat_option=request_body['repeatOption'] if request_body['repeatOption'] else '',
-        repeats=request_body['repeat'] if request_body['repeat'] else False,
-        id=event_id
-    )
-
-    if new_calendar is None:
-        return JSONResponse(content={'detail': 'we could not create your calendar event'}, status_code=422)
-
-    return new_calendar
-
-
-async def update_event_and_calendar(request: Request, edited_event: Event, event_id):
-    print(edited_event)
-    updated_event = await request.app.db['events'].replace_one(
-        {'_id': event_id},
-        jsonable_encoder(edited_event),
-    )
-
-    if updated_event is None:
-        return JSONResponse(content={'detail': 'we could not update that event'}, status_code=422)
-    
-    return
+        return await CalendarData.put_event_service(
+            request, 
+            calendar_id, 
+            event_id,
+        )
 
 
 async def delete_event(request: Request, calendar_id: str, event_id: str):
-    calendar_ref_removal = await request.app.db['calendars'].update_one(
-        {'_id': calendar_id},
-        {'$pull': {'events': event_id}}
+    return await CalendarData.delete_event_service(
+         request,
+         calendar_id,
+         event_id,
     )
-
-    if calendar_ref_removal is None:
-        return JSONResponse(content={'detail': 'failed to remove event from calendar'}, status_code=422)
-
-    event_removal = await request.app.db['events'].delete_one({'_id': event_id})
-
-    if event_removal is None:
-        return JSONResponse(content={'detail': 'failed to remove event'}, status_code=422)
-
-    updated_calendar = await CalendarDataHelper.populate_one_calendar(request, calendar_id)
-
-    if updated_calendar is None:
-        return JSONResponse(content={'detail': 'there was an issue populating the calendar with the removed event'}, status_code=422)
-
-    return JSONResponse(content={
-        'detail': 'Success! We deleted your event',
-        'updated_calendar': updated_calendar,
-    }, status_code=200)
 
 
 async def update_user_permissions(
